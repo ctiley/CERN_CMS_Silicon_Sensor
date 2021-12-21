@@ -1,0 +1,32 @@
+GCD Test
+Bias: 5000.000000
+CV_D0_CO138_LargeDiode_GRConnected_Irradiated_320min
+Date/Time: 8/24/2021 11:32:16 AM
+Sensor Name: CO138
+Type: N
+Annealing Status: Irradiated, Annealed at 60C for 320 minutes
+Environment: -20C
+Tester: Andrew Kent
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.000
+
+
+BiasVoltage	LCR_Cp_freq1000.0	LCR_Cp_freq10000.0	LCR_Rp_freq1000.0	LCR_Rp_freq10000.0	Temperature	Air_Temp	Humidity	Dewpoint	
+    1.0000	3.943E-12	3.848E-12	4.030E+9	3.606E+8	  -20.0262	   15.0577	    6.1920	  -21.8895	
+    2.0000	3.944E-12	3.848E-12	4.424E+9	3.631E+8	  -20.0338	   15.0365	    6.2432	  -21.8115	
+    3.0000	3.944E-12	3.848E-12	3.873E+9	3.648E+8	  -20.0237	   15.0032	    6.2900	  -21.7510	
+    4.0000	3.945E-12	3.848E-12	3.872E+9	3.645E+8	  -19.9601	   15.0040	    6.3324	  -21.6741	
+    5.0000	3.942E-12	3.848E-12	3.964E+9	3.632E+8	  -19.8507	   14.9635	    6.3827	  -21.6138	
+    6.0000	3.942E-12	3.879E-12	4.077E+9	2.954E+8	  -19.7464	   14.9895	    6.4092	  -21.5475	
+    7.0000	3.987E-12	3.879E-12	2.621E+9	2.950E+8	  -19.4742	   14.9812	    6.4817	  -21.4255	
+    8.0000	3.984E-12	3.878E-12	2.475E+9	2.942E+8	  -19.3572	   14.9469	    6.5161	  -21.3903	
+    9.0000	3.987E-12	3.878E-12	2.590E+9	2.956E+8	  -19.2376	   14.9374	    6.5183	  -21.3934	
+   10.0000	3.980E-12	3.878E-12	2.568E+9	2.947E+8	    0.0000	    0.0000	    0.0000	    0.0000	

@@ -1,0 +1,24 @@
+GCD Test
+Bias: 5000.000000
+CV_D0_CO139_LargeDiode_GRConnected_Irradiated
+Date/Time: 7/28/2021 2:59:30 PM
+Sensor Name: CO139
+Type: N
+Annealing Status: Irradiated, Not Annealed
+Environment: -20C
+Tester: Andrew Kent
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.000
+
+
+BiasVoltage	LCR_Cp_freq1000.0	LCR_Cp_freq10000.0	LCR_Rp_freq1000.0	LCR_Rp_freq10000.0	Temperature	Air_Temp	Humidity	Dewpoint	
+    1.0000	4.491E-11	1.975E-11	1.263E+6	1.043E+6	  -16.5982	    8.3076	   12.9522	  -18.5260	
+    2.0000	5.150E-11	1.986E-11	1.356E+6	1.065E+6	    0.0000	    0.0000	    0.0000	    0.0000	

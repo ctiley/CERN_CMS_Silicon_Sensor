@@ -1,0 +1,23 @@
+#Open Capacitance 1000Hz:Not Measured
+#Open Capacitance 100000Hz:4.843370E-12
+#34341_013_PSS_HM_XX_IrradSensor
+#Date/Time: 4/27/2021 4:41:06 PM
+#Sensor Name: 34341_013_PSS_HM_XX_IrradSensor
+#Type: P
+#Annealing Status: Not Irradiated
+#Environment: RT
+#Tester: Eric Spencer
+
+#Notes: 
+
+#Time Delay per Ramp Step (s): 0.000
+
+#Time Delay per Measurement (s) :0.000
+
+#Number of measurements per voltage: 0.000
+
+
+
+Strip 	Time	RH	ChuckT	AirT	Global Current	Interstrip C	I_InterstripR_V-0.0	I_InterstripR_V-1.0	I_InterstripR_V-2.0	I_InterstripR_V-3.0	I_InterstripR_V-4.0	I_InterstripR_V-5.0
+1	3702400935.412775	3.030535	27.387366	26.796927	-3.650000E-9	4.942530E-12	1.473586E-12	1.473586E-12	1.007544E-12	1.289686E-12	9.549720E-13	1.439687E-12
+2	3702400971.671409	3.031570	27.387545	26.791299	-3.660000E-9	4.945890E-12	1.766688E-12	1.392191E-12	1.393408E-12	1.382853E-12	1.592937E-12	1.521691E-12

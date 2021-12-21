@@ -1,0 +1,804 @@
+
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-gl-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+<script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.20/require.min.js" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" type="text/javascript"></script>
+<script type="text/javascript">function HoloViewsWidget() {
+}
+
+HoloViewsWidget.prototype.init_slider = function(init_val){
+  if(this.load_json) {
+    this.from_json()
+  } else {
+    this.update_cache();
+  }
+}
+
+HoloViewsWidget.prototype.populate_cache = function(idx){
+  this.cache[idx].innerHTML = this.frames[idx];
+  if (this.embed) {
+    delete this.frames[idx];
+  }
+}
+
+HoloViewsWidget.prototype.process_error = function(msg){
+}
+
+HoloViewsWidget.prototype.from_json = function() {
+  var data_url = this.json_path + this.id + '.json';
+  $.getJSON(data_url, $.proxy(function(json_data) {
+    this.frames = json_data;
+    this.update_cache();
+    this.update(0);
+  }, this));
+}
+
+HoloViewsWidget.prototype.dynamic_update = function(current){
+  if (current === undefined) {
+    return
+  }
+  this.current = current;
+  if (this.comm) {
+    var msg = {comm_id: this.id+'_client', content: current}
+    this.comm.send(msg);
+  }
+}
+
+HoloViewsWidget.prototype.update_cache = function(force){
+  var frame_len = Object.keys(this.frames).length;
+  for (var i=0; i<frame_len; i++) {
+    if(!this.load_json || this.dynamic)  {
+      var frame = Object.keys(this.frames)[i];
+    } else {
+      var frame = i;
+    }
+    if(!(frame in this.cache) || force) {
+      if ((frame in this.cache) && force) { this.cache[frame].remove() }
+      var div = document.createElement("div");
+      var parent = document.getElementById("_anim_img"+this.id);
+      div.style.display = "none";
+      parent.appendChild(div)
+      this.cache[frame] = div;
+      var cache_id = "_anim_img"+this.id+"_"+frame;
+      this.populate_cache(frame);
+    }
+  }
+}
+
+HoloViewsWidget.prototype.update = function(current){
+  if(current in this.cache) {
+    for (var index in this.cache) {
+      this.cache[index].style.display = "none";
+    }
+    this.cache[current].style.display = "";
+    this.wait = false;
+  }
+}
+
+HoloViewsWidget.prototype.init_comms = function() {
+  var that = this
+  HoloViews.comm_manager.register_target(this.plot_id, this.id, function (msg) { that.msg_handler(msg) })
+  if (!this.cached || this.dynamic) {
+    function ack_callback(msg) {
+      var msg = msg.metadata;
+      var comm_id = msg.comm_id;
+      var comm_status = HoloViews.comm_status[comm_id];
+      if (that.queue.length > 0) {
+        that.time = Date.now();
+        that.dynamic_update(that.queue[that.queue.length-1]);
+        that.queue = [];
+      } else {
+        that.wait = false;
+      }
+      if ((msg.msg_type == "Ready") && msg.content) {
+        console.log("Python callback returned following output:", msg.content);
+      } else if (msg.msg_type == "Error") {
+        console.log("Python failed with the following traceback:", msg.traceback)
+      }
+    }
+    var comm = HoloViews.comm_manager.get_client_comm(this.plot_id, this.id+'_client', ack_callback);
+    return comm
+  }
+}
+
+HoloViewsWidget.prototype.msg_handler = function(msg) {
+  var metadata = msg.metadata;
+  if ((metadata.msg_type == "Ready")) {
+    if (metadata.content) {
+      console.log("Python callback returned following output:", metadata.content);
+    }
+	return;
+  } else if (metadata.msg_type == "Error") {
+    console.log("Python failed with the following traceback:", metadata.traceback)
+    return
+  }
+  this.process_msg(msg)
+}
+
+HoloViewsWidget.prototype.process_msg = function(msg) {
+}
+
+function SelectionWidget(frames, id, slider_ids, keyMap, dim_vals, notFound, load_json, mode, cached, json_path, dynamic, plot_id){
+  this.frames = frames;
+  this.id = id;
+  this.plot_id = plot_id;
+  this.slider_ids = slider_ids;
+  this.keyMap = keyMap
+  this.current_frame = 0;
+  this.current_vals = dim_vals;
+  this.load_json = load_json;
+  this.mode = mode;
+  this.notFound = notFound;
+  this.cached = cached;
+  this.dynamic = dynamic;
+  this.cache = {};
+  this.json_path = json_path;
+  this.init_slider(this.current_vals[0]);
+  this.queue = [];
+  this.wait = false;
+  if (!this.cached || this.dynamic) {
+    this.comm = this.init_comms();
+  }
+}
+
+SelectionWidget.prototype = new HoloViewsWidget;
+
+
+SelectionWidget.prototype.get_key = function(current_vals) {
+  var key = "(";
+  for (var i=0; i<this.slider_ids.length; i++)
+  {
+    var val = this.current_vals[i];
+    if (!(typeof val === 'string')) {
+      if (val % 1 === 0) { val = val.toFixed(1); }
+      else { val = val.toFixed(10); val = val.slice(0, val.length-1);}
+    }
+    key += "'" + val + "'";
+    if(i != this.slider_ids.length-1) { key += ', ';}
+    else if(this.slider_ids.length == 1) { key += ',';}
+  }
+  key += ")";
+  return this.keyMap[key];
+}
+
+SelectionWidget.prototype.set_frame = function(dim_val, dim_idx){
+  this.current_vals[dim_idx] = dim_val;
+  var key = this.current_vals;
+  if (!this.dynamic) {
+    key = this.get_key(key)
+  }
+  if (this.dynamic || !this.cached) {
+    if ((this.time !== undefined) && ((this.wait) && ((this.time + 10000) > Date.now()))) {
+      this.queue.push(key);
+      return
+    }
+    this.queue = [];
+    this.time = Date.now();
+    this.current_frame = key;
+    this.wait = true;
+    this.dynamic_update(key)
+  } else if (key !== undefined) {
+    this.update(key)
+  }
+}
+
+
+/* Define the ScrubberWidget class */
+function ScrubberWidget(frames, num_frames, id, interval, load_json, mode, cached, json_path, dynamic, plot_id){
+  this.slider_id = "_anim_slider" + id;
+  this.loop_select_id = "_anim_loop_select" + id;
+  this.id = id;
+  this.plot_id = plot_id;
+  this.interval = interval;
+  this.current_frame = 0;
+  this.direction = 0;
+  this.dynamic = dynamic;
+  this.timer = null;
+  this.load_json = load_json;
+  this.mode = mode;
+  this.cached = cached;
+  this.frames = frames;
+  this.cache = {};
+  this.length = num_frames;
+  this.json_path = json_path;
+  document.getElementById(this.slider_id).max = this.length - 1;
+  this.init_slider(0);
+  this.wait = false;
+  this.queue = [];
+  if (!this.cached || this.dynamic) {
+    this.comm = this.init_comms()
+  }
+}
+
+ScrubberWidget.prototype = new HoloViewsWidget;
+
+ScrubberWidget.prototype.set_frame = function(frame){
+  this.current_frame = frame;
+  var widget = document.getElementById(this.slider_id);
+  if (widget === null) {
+    this.pause_animation();
+    return
+  }
+  widget.value = this.current_frame;
+  if (this.dynamic || !this.cached) {
+    if ((this.time !== undefined) && ((this.wait) && ((this.time + 10000) > Date.now()))) {
+      this.queue.push(frame);
+      return
+    }
+    this.queue = [];
+    this.time = Date.now();
+    this.wait = true;
+    this.dynamic_update(frame)
+  } else {
+    this.update(frame)
+  }
+}
+
+ScrubberWidget.prototype.get_loop_state = function(){
+  var button_group = document[this.loop_select_id].state;
+  for (var i = 0; i < button_group.length; i++) {
+    var button = button_group[i];
+    if (button.checked) {
+      return button.value;
+    }
+  }
+  return undefined;
+}
+
+
+ScrubberWidget.prototype.next_frame = function() {
+  this.set_frame(Math.min(this.length - 1, this.current_frame + 1));
+}
+
+ScrubberWidget.prototype.previous_frame = function() {
+  this.set_frame(Math.max(0, this.current_frame - 1));
+}
+
+ScrubberWidget.prototype.first_frame = function() {
+  this.set_frame(0);
+}
+
+ScrubberWidget.prototype.last_frame = function() {
+  this.set_frame(this.length - 1);
+}
+
+ScrubberWidget.prototype.slower = function() {
+  this.interval /= 0.7;
+  if(this.direction > 0){this.play_animation();}
+  else if(this.direction < 0){this.reverse_animation();}
+}
+
+ScrubberWidget.prototype.faster = function() {
+  this.interval *= 0.7;
+  if(this.direction > 0){this.play_animation();}
+  else if(this.direction < 0){this.reverse_animation();}
+}
+
+ScrubberWidget.prototype.anim_step_forward = function() {
+  if(this.current_frame < this.length - 1){
+    this.next_frame();
+  }else{
+    var loop_state = this.get_loop_state();
+    if(loop_state == "loop"){
+      this.first_frame();
+    }else if(loop_state == "reflect"){
+      this.last_frame();
+      this.reverse_animation();
+    }else{
+      this.pause_animation();
+      this.last_frame();
+    }
+  }
+}
+
+ScrubberWidget.prototype.anim_step_reverse = function() {
+  if(this.current_frame > 0){
+    this.previous_frame();
+  } else {
+    var loop_state = this.get_loop_state();
+    if(loop_state == "loop"){
+      this.last_frame();
+    }else if(loop_state == "reflect"){
+      this.first_frame();
+      this.play_animation();
+    }else{
+      this.pause_animation();
+      this.first_frame();
+    }
+  }
+}
+
+ScrubberWidget.prototype.pause_animation = function() {
+  this.direction = 0;
+  if (this.timer){
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+}
+
+ScrubberWidget.prototype.play_animation = function() {
+  this.pause_animation();
+  this.direction = 1;
+  var t = this;
+  if (!this.timer) this.timer = setInterval(function(){t.anim_step_forward();}, this.interval);
+}
+
+ScrubberWidget.prototype.reverse_animation = function() {
+  this.pause_animation();
+  this.direction = -1;
+  var t = this;
+  if (!this.timer) this.timer = setInterval(function(){t.anim_step_reverse();}, this.interval);
+}
+
+function extend(destination, source) {
+  for (var k in source) {
+    if (source.hasOwnProperty(k)) {
+      destination[k] = source[k];
+    }
+  }
+  return destination;
+}
+
+function update_widget(widget, values) {
+  if (widget.hasClass("ui-slider")) {
+    widget.slider('option', {
+      min: 0,
+      max: values.length-1,
+      dim_vals: values,
+      value: 0,
+      dim_labels: values
+    })
+    widget.slider('option', 'slide').call(widget, event, {value: 0})
+  } else {
+    widget.empty();
+    for (var i=0; i<values.length; i++){
+      widget.append($("<option>", {
+        value: i,
+        text: values[i]
+      }))
+    };
+    widget.data('values', values);
+    widget.data('value', 0);
+    widget.trigger("change");
+  };
+}
+
+function init_slider(id, plot_id, dim, values, next_vals, labels, dynamic, step, value, next_dim,
+                     dim_idx, delay, jQueryUI_CDN, UNDERSCORE_CDN) {
+  // Slider JS Block START
+  function loadcssfile(filename){
+    var fileref=document.createElement("link")
+    fileref.setAttribute("rel", "stylesheet")
+    fileref.setAttribute("type", "text/css")
+    fileref.setAttribute("href", filename)
+    document.getElementsByTagName("head")[0].appendChild(fileref)
+  }
+  loadcssfile("https://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css");
+  /* Check if jQuery and jQueryUI have been loaded
+     otherwise load with require.js */
+  var jQuery = window.jQuery,
+    // check for old versions of jQuery
+    oldjQuery = jQuery && !!jQuery.fn.jquery.match(/^1\.[0-4](\.|$)/),
+    jquery_path = '',
+    paths = {},
+    noConflict;
+  var jQueryUI = jQuery.ui;
+  // check for jQuery
+  if (!jQuery || oldjQuery) {
+    // load if it's not available or doesn't meet min standards
+    paths.jQuery = jQuery;
+    noConflict = !!oldjQuery;
+  } else {
+    // register the current jQuery
+    define('jquery', [], function() { return jQuery; });
+  }
+  if (!jQueryUI) {
+    paths.jQueryUI = jQueryUI_CDN.slice(null, -3);
+  } else {
+    define('jQueryUI', [], function() { return jQuery.ui; });
+  }
+  paths.underscore = UNDERSCORE_CDN.slice(null, -3);
+  var jquery_require = {
+    paths: paths,
+    shim: {
+      "jQueryUI": {
+        exports:"$",
+        deps: ['jquery']
+      },
+      "underscore": {
+        exports: '_'
+      }
+    }
+  }
+  require.config(jquery_require);
+  require(["jQueryUI", "underscore"], function(jUI, _){
+    if (noConflict) $.noConflict(true);
+    var vals = values;
+    if (dynamic && vals.constructor === Array) {
+      var default_value = parseFloat(value);
+      var min = parseFloat(vals[0]);
+      var max = parseFloat(vals[vals.length-1]);
+      var wstep = step;
+      var wlabels = [default_value];
+      var init_label = default_value;
+    } else {
+      var min = 0;
+      if (dynamic) {
+        var max = Object.keys(vals).length - 1;
+        var init_label = labels[value];
+        var default_value = values[value];
+      } else {
+        var max = vals.length - 1;
+        var init_label = labels[value];
+        var default_value = value;
+      }
+      var wstep = 1;
+      var wlabels = labels;
+    }
+    function adjustFontSize(text) {
+      var width_ratio = (text.parent().width()/8)/text.val().length;
+      var size = Math.min(0.9, Math.max(0.6, width_ratio))+'em';
+      text.css('font-size', size);
+    }
+    var slider = $('#_anim_widget'+id+'_'+dim);
+    slider.slider({
+      animate: "fast",
+      min: min,
+      max: max,
+      step: wstep,
+      value: default_value,
+      dim_vals: vals,
+      dim_labels: wlabels,
+      next_vals: next_vals,
+      slide: function(event, ui) {
+        var vals = slider.slider("option", "dim_vals");
+        var next_vals = slider.slider("option", "next_vals");
+        var dlabels = slider.slider("option", "dim_labels");
+        if (dynamic) {
+          var dim_val = ui.value;
+          if (vals.constructor === Array) {
+            var label = ui.value;
+          } else {
+            var label = dlabels[ui.value];
+          }
+        } else {
+          var dim_val = vals[ui.value];
+          var label = dlabels[ui.value];
+        }
+        var text = $('#textInput'+id+'_'+dim);
+        text.val(label);
+        adjustFontSize(text);
+        HoloViews.index[plot_id].set_frame(dim_val, dim_idx);
+        if (Object.keys(next_vals).length > 0) {
+          var new_vals = next_vals[dim_val];
+          var next_widget = $('#_anim_widget'+id+'_'+next_dim);
+          update_widget(next_widget, new_vals);
+        }
+      }
+    });
+    slider.keypress(function(event) {
+      if (event.which == 80 || event.which == 112) {
+        var start = slider.slider("option", "value");
+        var stop =  slider.slider("option", "max");
+        for (var i=start; i<=stop; i++) {
+          var delay = i*delay;
+          $.proxy(function doSetTimeout(i) { setTimeout($.proxy(function() {
+            var val = {value:i};
+            slider.slider('value',i);
+            slider.slider("option", "slide")(null, val);
+          }, slider), delay);}, slider)(i);
+        }
+      }
+      if (event.which == 82 || event.which == 114) {
+        var start = slider.slider("option", "value");
+        var stop =  slider.slider("option", "min");
+        var count = 0;
+        for (var i=start; i>=stop; i--) {
+          var delay = count*delay;
+          count = count + 1;
+          $.proxy(function doSetTimeout(i) { setTimeout($.proxy(function() {
+            var val = {value:i};
+            slider.slider('value',i);
+            slider.slider("option", "slide")(null, val);
+          }, slider), delay);}, slider)(i);
+        }
+      }
+    });
+    var textInput = $('#textInput'+id+'_'+dim)
+    textInput.val(init_label);
+    adjustFontSize(textInput);
+  });
+}
+
+function init_dropdown(id, plot_id, dim, vals, value, next_vals, labels, next_dim, dim_idx, dynamic) {
+  var widget = $("#_anim_widget"+id+'_'+dim);
+  widget.data('values', vals)
+  for (var i=0; i<vals.length; i++){
+    if (dynamic) {
+      var val = vals[i];
+    } else {
+      var val = i;
+    }
+    widget.append($("<option>", {
+      value: val,
+      text: labels[i]
+    }));
+  };
+  widget.data("next_vals", next_vals);
+  widget.val(value);
+  widget.on('change', function(event, ui) {
+    if (dynamic) {
+      var dim_val = parseInt(this.value);
+    } else {
+      var dim_val = $.data(this, 'values')[this.value];
+    }
+    var next_vals = $.data(this, "next_vals");
+    if (Object.keys(next_vals).length > 0) {
+      var new_vals = next_vals[dim_val];
+      var next_widget = $('#_anim_widget'+id+'_'+next_dim);
+      update_widget(next_widget, new_vals);
+    }
+    var widgets = HoloViews.index[plot_id]
+    if (widgets) {
+      widgets.set_frame(dim_val, dim_idx);
+    }
+  });
+}
+
+
+if (window.HoloViews === undefined) {
+  window.HoloViews = {}
+  window.PyViz = window.HoloViews
+} else if (window.PyViz === undefined) {
+  window.PyViz = window.HoloViews
+}
+
+
+var _namespace = {
+  init_slider: init_slider,
+  init_dropdown: init_dropdown,
+  comms: {},
+  comm_status: {},
+  index: {},
+  plot_index: {},
+  kernels: {},
+  receivers: {}
+}
+
+for (var k in _namespace) {
+  if (!(k in window.HoloViews)) {
+    window.HoloViews[k] = _namespace[k];
+  }
+}
+
+// Define Bokeh specific subclasses
+function BokehSelectionWidget() {
+  SelectionWidget.apply(this, arguments);
+}
+
+function BokehScrubberWidget() {
+  ScrubberWidget.apply(this, arguments);
+}
+
+// Let them inherit from the baseclasses
+BokehSelectionWidget.prototype = Object.create(SelectionWidget.prototype);
+BokehScrubberWidget.prototype = Object.create(ScrubberWidget.prototype);
+
+// Define methods to override on widgets
+var BokehMethods = {
+  update_cache : function(){
+    for (var index in this.frames) {
+      this.frames[index] = JSON.parse(this.frames[index]);
+    }
+  },
+  update : function(current){
+    if (current === undefined) {
+      return;
+    }
+    var data = this.frames[current];
+    if (data !== undefined) {
+      if (data.root in HoloViews.plot_index) {
+        var doc = HoloViews.plot_index[data.root].model.document;
+      } else {
+        var doc = Bokeh.index[data.root].model.document;
+      }
+      doc.apply_json_patch(data.content);
+    }
+  },
+  init_comms: function() {
+    if (Bokeh.protocol !== undefined) {
+      this.receiver = new Bokeh.protocol.Receiver()
+    } else {
+      this.receiver = null;
+    }
+    return HoloViewsWidget.prototype.init_comms.call(this);
+  },
+  process_msg : function(msg) {
+    if (this.plot_id in HoloViews.plot_index) {
+      var doc = HoloViews.plot_index[this.plot_id].model.document;
+    } else {
+      var doc = Bokeh.index[this.plot_id].model.document;
+    }
+    if (this.receiver === null) { return }
+    var receiver = this.receiver;
+    if (msg.buffers.length > 0) {
+      receiver.consume(msg.buffers[0].buffer)
+    } else {
+      receiver.consume(msg.content.data)
+    }
+    const comm_msg = receiver.message;
+    if ((comm_msg != null) && (doc != null)) {
+      doc.apply_json_patch(comm_msg.content, comm_msg.buffers)
+    }
+  }
+}
+
+// Extend Bokeh widgets with backend specific methods
+extend(BokehSelectionWidget.prototype, BokehMethods);
+extend(BokehScrubberWidget.prototype, BokehMethods);
+
+window.HoloViews.BokehSelectionWidget = BokehSelectionWidget
+window.HoloViews.BokehScrubberWidget = BokehScrubberWidget
+</script>
+<script type="text/javascript">
+    function CommManager() {
+    }
+
+    CommManager.prototype.register_target = function() {
+    }
+
+    CommManager.prototype.get_client_comm = function() {
+    }
+
+    window.PyViz.comm_manager = CommManager()
+    </script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+<style>div.hololayout {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+div.holoframe {
+  width: 75%;
+}
+
+div.holowell {
+  display: flex;
+  align-items: center;
+}
+
+form.holoform {
+  background-color: #fafafa;
+  border-radius: 5px;
+  overflow: hidden;
+  padding-left: 0.8em;
+  padding-right: 0.8em;
+  padding-top: 0.4em;
+  padding-bottom: 0.4em;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  border: 1px solid #e3e3e3;
+}
+
+div.holowidgets {
+  padding-right: 0;
+  width: 25%;
+}
+
+div.holoslider {
+  min-height: 0 !important;
+  height: 0.8em;
+  width: 100%;
+}
+
+div.holoformgroup {
+  padding-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+div.hologroup {
+  padding-left: 0;
+  padding-right: 0.8em;
+  width: 100%;
+}
+
+.holoselect {
+  width: 92%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.holotext {
+  padding-left:  0.5em;
+  padding-right: 0;
+  width: 100%;
+}
+
+.holowidgets .ui-resizable-se {
+  visibility: hidden
+}
+
+.holoframe > .ui-resizable-se {
+  visibility: hidden
+}
+
+.holowidgets .ui-resizable-s {
+  visibility: hidden
+}
+
+
+/* CSS rules for noUISlider based slider used by JupyterLab extension  */
+
+.noUi-handle {
+  width: 20px !important;
+  height: 20px !important;
+  left: -5px !important;
+  top: -5px !important;
+}
+
+.noUi-handle:before, .noUi-handle:after {
+  visibility: hidden;
+  height: 0px;
+}
+
+.noUi-target {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+div.bk-hbox {
+    display: flex;
+    justify-content: center;
+}
+
+div.bk-hbox div.bk-plot {
+    padding: 8px;
+}
+
+div.bk-hbox div.bk-data-table {
+    padding: 20px;
+}
+</style><div style='display: table; margin: 0 auto;'>
+
+
+
+
+
+
+  <div class="bk-root" id="18883a18-5ddd-436e-af4f-fccaf7dd02af" data-root-id="8774"></div>
+
+<script type="text/javascript">
+  (function(root) {
+  function embed_document(root) {
+    
+  var docs_json = {"0e80ab81-3e6b-48f2-90dc-650aca19bd01":{"roots":{"references":[{"attributes":{"below":[{"id":"8783","type":"LinearAxis"}],"center":[{"id":"8787","type":"Grid"},{"id":"8792","type":"Grid"},{"id":"8825","type":"Legend"}],"left":[{"id":"8788","type":"LinearAxis"}],"margin":null,"min_border_bottom":10,"min_border_left":10,"min_border_right":10,"min_border_top":10,"plot_height":800,"plot_width":1200,"renderers":[{"id":"8817","type":"GlyphRenderer"},{"id":"8833","type":"GlyphRenderer"},{"id":"8850","type":"GlyphRenderer"},{"id":"8869","type":"GlyphRenderer"},{"id":"8890","type":"GlyphRenderer"}],"sizing_mode":"fixed","title":{"id":"8775","type":"Title"},"toolbar":{"id":"8798","type":"Toolbar"},"toolbar_location":"above","x_range":{"id":"8767","type":"Range1d"},"x_scale":{"id":"8779","type":"LinearScale"},"y_range":{"id":"8768","type":"Range1d"},"y_scale":{"id":"8781","type":"LinearScale"}},"id":"8774","subtype":"Figure","type":"Plot"},{"attributes":{"grid_line_color":"black","grid_line_dash":[4,4],"grid_line_width":1.5,"minor_grid_line_color":"lightgray","ticker":{"id":"8784","type":"BasicTicker"}},"id":"8787","type":"Grid"},{"attributes":{"text":"CV 10K","text_color":{"value":"black"},"text_font_size":{"value":"28pt"}},"id":"8775","type":"Title"},{"attributes":{},"id":"8845","type":"Selection"},{"attributes":{},"id":"8789","type":"BasicTicker"},{"attributes":{"label":{"value":"CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM"},"renderers":[{"id":"8817","type":"GlyphRenderer"}]},"id":"8826","type":"LegendItem"},{"attributes":{},"id":"8797","type":"ResetTool"},{"attributes":{"line_alpha":0.2,"line_color":"#8b8b8b","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8889","type":"Line"},{"attributes":{},"id":"8828","type":"Selection"},{"attributes":{"callback":null,"data":{"C10K":{"__ndarray__":"EW8b5igUtz17k3zQvv+xPVl4ViDHSq895VKCrzN6rD3b0A4rLYWqPbcOaMAlKKk96o7OjCf4pz2h8sgrtwunPYL3SWbLNaY9asngqJNzpT0KqXLTxeGkPYQPAvIsaKQ99ZFCDzf9oz2Hdkw/Y5yjPcPOJUeRRKM9+rRXzhD0oj2iF9wPAqyiPR80SD10aKI9XeePzKcroj1aMbO9nPWhPS41vpoSxKE9YQS3KOmVoT1VaosYgW6hPQ7Z4uqIRqE9JxMobvEhoT3wMuRJCv+gPaQvlJtj3qA9kyPBCk2+oD2n614NB6GgPTCi9krhhKA9aj4F4WtqoD3e0ZCUhlCgPQJLk6BROKA9sdWbcfweoD0QRhubVwegPVRbL8SF4J896PUVA721nz3bW+ryVI6fPaV7ps5ta589OBaNDaVAnz0XWVVzfRufPWuKFxR29549NKrT747Unj2I25WQh7CePVH7UWygjZ49jwkIg9lrnj259LEPU0yePeLfW5zMLJ494YTtFMcRnj1A9Ww+IvqdPXQf1FP+5p099PEckHvZnT3Uj1N9Wc+dPRP5dxuYyJ09U2KcudbBnT0IurqSNbydPajuzOHUuJ090jTl9VO0nT1yafdE87CdPRKeCZSSrZ09stIb4zGqnT0nwRUeUqudPVIHLjLRpp09Zyo6vJCknT18TUZGUKKdPQdfTAswoZ09HIJYle+enT2nk15az52dPTGlZB+vnJ09vLZq5I6bnT1HyHCpbpqdPUfIcKlump09XOt8My6YnT1c63wzLpidPeb8gvgNl5095vyC+A2XnT38H4+CzZSdPfwfj4LNlJ09hjGVR62TnT2GMZVHrZOdPfwfj4LNlJ09nFSh0WyRnT0mZqeWTJCdPRFDmwyNkp09O4mzIAyOnT07ibMgDI6dPcaaueXrjJ09xpq55euMnT1RrL+qy4udPdu9xW+rip09O4mzIAyOnT1mz8s0i4mdPWbPyzSLiZ09Zs/LNIuJnT3x4NH5aoidPfHg0flqiJ098eDR+WqInT178te+SoedPXvy175Kh509e/LXvkqHnT0AAAAAAAD4fw==","dtype":"float64","shape":[101]},"Name":["CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM"],"voltage":{"__ndarray__":"AAAAAAAAFEAAAAAAAAAkQAAAAAAAAC5AAAAAAAAANEAAAAAAAAA5QAAAAAAAAD5AAAAAAACAQUAAAAAAAABEQAAAAAAAgEZAAAAAAAAASUAAAAAAAIBLQAAAAAAAAE5AAAAAAABAUEAAAAAAAIBRQAAAAAAAwFJAAAAAAAAAVEAAAAAAAEBVQAAAAAAAgFZAAAAAAADAV0AAAAAAAABZQAAAAAAAQFpAAAAAAACAW0AAAAAAAMBcQAAAAAAAAF5AAAAAAABAX0AAAAAAAEBgQAAAAAAA4GBAAAAAAACAYUAAAAAAACBiQAAAAAAAwGJAAAAAAABgY0AAAAAAAABkQAAAAAAAoGRAAAAAAABAZUAAAAAAAOBlQAAAAAAAgGZAAAAAAAAgZ0AAAAAAAMBnQAAAAAAAYGhAAAAAAAAAaUAAAAAAAKBpQAAAAAAAQGpAAAAAAADgakAAAAAAAIBrQAAAAAAAIGxAAAAAAADAbEAAAAAAAGBtQAAAAAAAAG5AAAAAAACgbkAAAAAAAEBvQAAAAAAA4G9AAAAAAABAcEAAAAAAAJBwQAAAAAAA4HBAAAAAAAAwcUAAAAAAAIBxQAAAAAAA0HFAAAAAAAAgckAAAAAAAHByQAAAAAAAwHJAAAAAAAAQc0AAAAAAAGBzQAAAAAAAsHNAAAAAAAAAdEAAAAAAAFB0QAAAAAAAoHRAAAAAAADwdEAAAAAAAEB1QAAAAAAAkHVAAAAAAADgdUAAAAAAADB2QAAAAAAAgHZAAAAAAADQdkAAAAAAACB3QAAAAAAAcHdAAAAAAADAd0AAAAAAABB4QAAAAAAAYHhAAAAAAACweEAAAAAAAAB5QAAAAAAAoHlAAAAAAABAekAAAAAAAOB6QAAAAAAAgHtAAAAAAAAgfEAAAAAAAMB8QAAAAAAAYH1AAAAAAAAAfkAAAAAAAKB+QAAAAAAAQH9AAAAAAADgf0AAAAAAAECAQAAAAAAAkIBAAAAAAADggEAAAAAAADCBQAAAAAAAgIFAAAAAAADQgUAAAAAAACCCQAAAAAAAcIJAAAAAAADAgkAAAAAAAAD4fw==","dtype":"float64","shape":[101]}},"selected":{"id":"8845","type":"Selection"},"selection_policy":{"id":"8881","type":"UnionRenderers"}},"id":"8844","type":"ColumnDataSource"},{"attributes":{},"id":"8921","type":"UnionRenderers"},{"attributes":{"click_policy":"mute","items":[{"id":"8826","type":"LegendItem"},{"id":"8843","type":"LegendItem"},{"id":"8862","type":"LegendItem"},{"id":"8883","type":"LegendItem"},{"id":"8906","type":"LegendItem"}],"label_text_font_size":{"value":"11pt"}},"id":"8825","type":"Legend"},{"attributes":{"data_source":{"id":"8827","type":"ColumnDataSource"},"glyph":{"id":"8830","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"8832","type":"Line"},"nonselection_glyph":{"id":"8831","type":"Line"},"selection_glyph":null,"view":{"id":"8834","type":"CDSView"}},"id":"8833","type":"GlyphRenderer"},{"attributes":{"callback":null,"end":8.967980000000001e-11,"reset_end":8.967980000000001e-11,"reset_start":-2.8378000000000007e-12,"start":-2.8378000000000007e-12,"tags":[[["C10K","C10K",null]]]},"id":"8768","type":"Range1d"},{"attributes":{"callback":null,"data":{"C10K":{"__ndarray__":"T+wH0qFcsj2z3veoYsOsPYxt4SShEak9abcWgMrNpj2dPWuvZCqlPZo4/N6E8qM9NFFmZJvZoj3Abkjvq/GhPcdHOr2QHqE9jrcH7TZSoD2sqRjBvyafPcEiJAKlB549uaUfTn5KnT1vCRrtDV6cPX5l/tGx1Js9qrfyq2Hpmj3vSRpsEmaZPQvxl59JApg9HKjqC/OTlz1ZWzKbJleXPZhp6LFfNZc9lw56Kloalz3LOOE/NgeXPcrdcrgw7JY9tF/4pmvTlj2d4X2VprqWPecu8TRCpZY9MXxk1N2Plj1lpsvpuXyWPQ+/LDq2apY9L8aHxdJZlj3Du9yLD0qWPVixMVJMOpY9rT1iekoxlj3MRL0FZyCWPTb0+bckFZY9K7U8L8IIlj2VZHnhf/2VPXUCsM5d85U9VaDmuzvplT00Ph2pGd+VPYnKTdEX1pU93lZ++RXNlT2+9LTm88KVPROB5Q7yuZU93fsPchCylT0yiECaDqmVPfwCa/0soZU9x32VYEuZlT0G57n+iZKVPbs+2NfojJU95oTw62eIlT2GuQI7B4WVPZvcDsXGgpU9sP8aT4aAlT07ESEUZn+VPVA0LZ4lfZU920UzYwV8lT1lVzko5XqVPfBoP+3EeZU9e3pFsqR4lT17ekWypHiVPQWMS3eEd5U9BYxLd4R3lT2QnVE8ZHaVPZCdUTxkdpU9Gq9XAUR1lT0ar1cBRHWVPRqvVwFEdZU9pcBdxiN0lT2lwF3GI3SVPTDSY4sDc5U9MNJjiwNzlT2QnVE8ZHaVPTDSY4sDc5U9MNJjiwNzlT2642lQ43GVPbrjaVDjcZU9uuNpUONxlT2642lQ43GVPUX1bxXDcJU9RfVvFcNwlT1F9W8Vw3CVPc8Gdtqib5U9RfVvFcNwlT3PBnbaom+VPc8Gdtqib5U9zwZ22qJvlT3PBnbaom+VPVoYfJ+CbpU9Whh8n4JulT1aGHyfgm6VPVoYfJ+CbpU9Whh8n4JulT1aGHyfgm6VPVoYfJ+CbpU95SmCZGJtlT3lKYJkYm2VPeUpgmRibZU95SmCZGJtlT0AAAAAAAD4fw==","dtype":"float64","shape":[101]},"Name":["CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM","CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM"],"voltage":{"__ndarray__":"AAAAAAAAFEAAAAAAAAAkQAAAAAAAAC5AAAAAAAAANEAAAAAAAAA5QAAAAAAAAD5AAAAAAACAQUAAAAAAAABEQAAAAAAAgEZAAAAAAAAASUAAAAAAAIBLQAAAAAAAAE5AAAAAAABAUEAAAAAAAIBRQAAAAAAAwFJAAAAAAAAAVEAAAAAAAEBVQAAAAAAAgFZAAAAAAADAV0AAAAAAAABZQAAAAAAAQFpAAAAAAACAW0AAAAAAAMBcQAAAAAAAAF5AAAAAAABAX0AAAAAAAEBgQAAAAAAA4GBAAAAAAACAYUAAAAAAACBiQAAAAAAAwGJAAAAAAABgY0AAAAAAAABkQAAAAAAAoGRAAAAAAABAZUAAAAAAAOBlQAAAAAAAgGZAAAAAAAAgZ0AAAAAAAMBnQAAAAAAAYGhAAAAAAAAAaUAAAAAAAKBpQAAAAAAAQGpAAAAAAADgakAAAAAAAIBrQAAAAAAAIGxAAAAAAADAbEAAAAAAAGBtQAAAAAAAAG5AAAAAAACgbkAAAAAAAEBvQAAAAAAA4G9AAAAAAABAcEAAAAAAAJBwQAAAAAAA4HBAAAAAAAAwcUAAAAAAAIBxQAAAAAAA0HFAAAAAAAAgckAAAAAAAHByQAAAAAAAwHJAAAAAAAAQc0AAAAAAAGBzQAAAAAAAsHNAAAAAAAAAdEAAAAAAAFB0QAAAAAAAoHRAAAAAAADwdEAAAAAAAEB1QAAAAAAAkHVAAAAAAADgdUAAAAAAADB2QAAAAAAAgHZAAAAAAADQdkAAAAAAACB3QAAAAAAAcHdAAAAAAADAd0AAAAAAABB4QAAAAAAAYHhAAAAAAACweEAAAAAAAAB5QAAAAAAAoHlAAAAAAABAekAAAAAAAOB6QAAAAAAAgHtAAAAAAAAgfEAAAAAAAMB8QAAAAAAAYH1AAAAAAAAAfkAAAAAAAKB+QAAAAAAAQH9AAAAAAADgf0AAAAAAAECAQAAAAAAAkIBAAAAAAADggEAAAAAAADCBQAAAAAAAgIFAAAAAAADQgUAAAAAAACCCQAAAAAAAcIJAAAAAAADAgkAAAAAAAAD4fw==","dtype":"float64","shape":[101]}},"selected":{"id":"8885","type":"Selection"},"selection_policy":{"id":"8921","type":"UnionRenderers"}},"id":"8884","type":"ColumnDataSource"},{"attributes":{"label":{"value":"CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_4_13_2021_4_48_43_PM"},"renderers":[{"id":"8850","type":"GlyphRenderer"}]},"id":"8862","type":"LegendItem"},{"attributes":{"axis_label":"capacitance [F]","axis_label_text_font_size":{"value":"24pt"},"bounds":"auto","formatter":{"id":"8807","type":"BasicTickFormatter"},"major_label_orientation":"horizontal","major_label_text_font_size":{"value":"24pt"},"ticker":{"id":"8789","type":"BasicTicker"}},"id":"8788","type":"LinearAxis"},{"attributes":{},"id":"8781","type":"LinearScale"},{"attributes":{},"id":"8860","type":"UnionRenderers"},{"attributes":{"callback":null,"end":600.0,"reset_end":600.0,"reset_start":5.0,"start":5.0,"tags":[[["voltage","voltage",null]]]},"id":"8767","type":"Range1d"},{"attributes":{},"id":"8793","type":"SaveTool"},{"attributes":{"overlay":{"id":"8824","type":"BoxAnnotation"}},"id":"8796","type":"BoxZoomTool"},{"attributes":{},"id":"8807","type":"BasicTickFormatter"},{"attributes":{"callback":null,"data":{"C10K":{"__ndarray__":"yjTuPiCI1j0DO8EWHATTPUA+EZ1eb889H6D+g+ldyz0ixwkHyG/IPdo8zs4gKcY9ZQsemFw/xD33oww4AKPCPUNeuIdqTsE9DCxrcGJjwD1fRWwoe16/PQJCJa/uNr49Qly3i1guvT0VJHlie/W4Pd7utBknRLg99y7o/yestz3yZ8BaDCW3PYLxWwMzqbY9qMu6+Zs4tj0ZTvsWps21PR8h/4HybbU9cZzkE+ATtT0NwKvMbr+0PfWLVKyecLQ9AixuH58ktD1ZdGm5QN6zPSE5tw1UoLM9n1UjO8Zcsz2M7uEiqiGzPZ9bEZ5e6bI92JyxrOOzsj0Q3lG7aH6yPZPH0/COTrI9F7FVJrUesj3Abkjvq/GxPY4ArEtzx7E9XJIPqDqdsT0qJHMEAnOxPR6KR/SZS7E9EvAb5DEksT0rKmFnmv+wPURkpuoC27A9XZ7rbWu2sD122DDx05GwPbXm5gcNcLA9ziAsi3VLsD0yA1M1fyywPXERCUy4CrA99I9BEyXdrz1SpVK1eqqvPUYLJ6USg689GmqgCY5srz05cfuUqluvPVl4ViDHSq89DtB0+SVFrz3DJ5PShD+vPS3Xz4RCNK89LdfPhEI0rz2Xhgw3ACmvPZeGDDcAKa89TN4qEF8jrz0BNknpvR2vPQE2Sem9Ha89t41nwhwYrz23jWfCHBivPbeNZ8IcGK89bOWFm3sSrz1s5YWbexKvPWzlhZt7Eq89IT2kdNoMrz0hPaR02gyvPSE9pHTaDK89IT2kdNoMrz3WlMJNOQevPdaUwk05B6891pTCTTkHrz3WlMJNOQevPdaUwk05B6891pTCTTkHrz2L7OAmmAGvPYvs4CaYAa89i+zgJpgBrz1ARP//9vuuPUBE///2+649QET///b7rj1ARP//9vuuPfWbHdlV9q499Zsd2VX2rj31mx3ZVfauPfWbHdlV9q499Zsd2VX2rj31mx3ZVfauPfWbHdlV9q49qvM7srTwrj31mx3ZVfauParzO7K08K49qvM7srTwrj2q8zuytPCuParzO7K08K49qvM7srTwrj0AAAAAAAD4fw==","dtype":"float64","shape":[101]},"Name":["CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM","CV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_14_04_PM"],"voltage":{"__ndarray__":"AAAAAAAAFEAAAAAAAAAkQAAAAAAAAC5AAAAAAAAANEAAAAAAAAA5QAAAAAAAAD5AAAAAAACAQUAAAAAAAABEQAAAAAAAgEZAAAAAAAAASUAAAAAAAIBLQAAAAAAAAE5AAAAAAABAUEAAAAAAAIBRQAAAAAAAwFJAAAAAAAAAVEAAAAAAAEBVQAAAAAAAgFZAAAAAAADAV0AAAAAAAABZQAAAAAAAQFpAAAAAAACAW0AAAAAAAMBcQAAAAAAAAF5AAAAAAABAX0AAAAAAAEBgQAAAAAAA4GBAAAAAAACAYUAAAAAAACBiQAAAAAAAwGJAAAAAAABgY0AAAAAAAABkQAAAAAAAoGRAAAAAAABAZUAAAAAAAOBlQAAAAAAAgGZAAAAAAAAgZ0AAAAAAAMBnQAAAAAAAYGhAAAAAAAAAaUAAAAAAAKBpQAAAAAAAQGpAAAAAAADgakAAAAAAAIBrQAAAAAAAIGxAAAAAAADAbEAAAAAAAGBtQAAAAAAAAG5AAAAAAACgbkAAAAAAAEBvQAAAAAAA4G9AAAAAAABAcEAAAAAAAJBwQAAAAAAA4HBAAAAAAAAwcUAAAAAAAIBxQAAAAAAA0HFAAAAAAAAgckAAAAAAAHByQAAAAAAAwHJAAAAAAAAQc0AAAAAAAGBzQAAAAAAAsHNAAAAAAAAAdEAAAAAAAFB0QAAAAAAAoHRAAAAAAADwdEAAAAAAAEB1QAAAAAAAkHVAAAAAAADgdUAAAAAAADB2QAAAAAAAgHZAAAAAAADQdkAAAAAAACB3QAAAAAAAcHdAAAAAAADAd0AAAAAAABB4QAAAAAAAYHhAAAAAAACweEAAAAAAAAB5QAAAAAAAoHlAAAAAAABAekAAAAAAAOB6QAAAAAAAgHtAAAAAAAAgfEAAAAAAAMB8QAAAAAAAYH1AAAAAAAAAfkAAAAAAAKB+QAAAAAAAQH9AAAAAAADgf0AAAAAAAECAQAAAAAAAkIBAAAAAAADggEAAAAAAADCBQAAAAAAAgIFAAAAAAADQgUAAAAAAACCCQAAAAAAAcIJAAAAAAADAgkAAAAAAAAD4fw==","dtype":"float64","shape":[101]}},"selected":{"id":"8812","type":"Selection"},"selection_policy":{"id":"8841","type":"UnionRenderers"}},"id":"8811","type":"ColumnDataSource"},{"attributes":{"source":{"id":"8827","type":"ColumnDataSource"}},"id":"8834","type":"CDSView"},{"attributes":{"line_color":"#fc4f30","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8830","type":"Line"},{"attributes":{"line_alpha":0.2,"line_color":"#e5ae38","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8849","type":"Line"},{"attributes":{"label":{"value":"CV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_18_01_PM"},"renderers":[{"id":"8890","type":"GlyphRenderer"}]},"id":"8906","type":"LegendItem"},{"attributes":{"line_alpha":0.1,"line_color":"#fc4f30","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8831","type":"Line"},{"attributes":{"line_alpha":0.2,"line_color":"#6d904f","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8868","type":"Line"},{"attributes":{"bottom_units":"screen","fill_alpha":{"value":0.5},"fill_color":{"value":"lightgrey"},"left_units":"screen","level":"overlay","line_alpha":{"value":1.0},"line_color":{"value":"black"},"line_dash":[4,4],"line_width":{"value":2},"render_mode":"css","right_units":"screen","top_units":"screen"},"id":"8824","type":"BoxAnnotation"},{"attributes":{"callback":null,"renderers":[{"id":"8817","type":"GlyphRenderer"},{"id":"8833","type":"GlyphRenderer"},{"id":"8850","type":"GlyphRenderer"},{"id":"8869","type":"GlyphRenderer"},{"id":"8890","type":"GlyphRenderer"}],"tooltips":[["File","@Name"],["index","$index"],["(x,y)","($x, $y)"]]},"id":"8769","type":"HoverTool"},{"attributes":{},"id":"8794","type":"PanTool"},{"attributes":{"active_drag":"auto","active_inspect":"auto","active_multi":null,"active_scroll":"auto","active_tap":"auto","tools":[{"id":"8769","type":"HoverTool"},{"id":"8793","type":"SaveTool"},{"id":"8794","type":"PanTool"},{"id":"8795","type":"WheelZoomTool"},{"id":"8796","type":"BoxZoomTool"},{"id":"8797","type":"ResetTool"}]},"id":"8798","type":"Toolbar"},{"attributes":{"data_source":{"id":"8811","type":"ColumnDataSource"},"glyph":{"id":"8814","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"8816","type":"Line"},"nonselection_glyph":{"id":"8815","type":"Line"},"selection_glyph":null,"view":{"id":"8818","type":"CDSView"}},"id":"8817","type":"GlyphRenderer"},{"attributes":{"source":{"id":"8811","type":"ColumnDataSource"}},"id":"8818","type":"CDSView"},{"attributes":{"line_color":"#6d904f","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8866","type":"Line"},{"attributes":{},"id":"8795","type":"WheelZoomTool"},{"attributes":{"source":{"id":"8863","type":"ColumnDataSource"}},"id":"8870","type":"CDSView"},{"attributes":{"data_source":{"id":"8844","type":"ColumnDataSource"},"glyph":{"id":"8847","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"8849","type":"Line"},"nonselection_glyph":{"id":"8848","type":"Line"},"selection_glyph":null,"view":{"id":"8851","type":"CDSView"}},"id":"8850","type":"GlyphRenderer"},{"attributes":{},"id":"8805","type":"BasicTickFormatter"},{"attributes":{"label":{"value":"CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM"},"renderers":[{"id":"8869","type":"GlyphRenderer"}]},"id":"8883","type":"LegendItem"},{"attributes":{},"id":"8779","type":"LinearScale"},{"attributes":{"data_source":{"id":"8863","type":"ColumnDataSource"},"glyph":{"id":"8866","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"8868","type":"Line"},"nonselection_glyph":{"id":"8867","type":"Line"},"selection_glyph":null,"view":{"id":"8870","type":"CDSView"}},"id":"8869","type":"GlyphRenderer"},{"attributes":{"callback":null,"data":{"C10K":{"__ndarray__":"Q1VT84X7wT2PHFE+W2a7PW+ELIh+4bY9pBZdfUlXtD02ssJOOYGyPaFzySnAG7E9M573KV67rz3x4NH5aoitPXyvIcOmnqs9DUWZMf47qj2YBw01CTmpPcW0b5a+aKg9EGktg5CHpz0l4jjEdWimPTxyff4DJ6U9rgCa4T7Voz174g6SkwGjPdHPm6QvoKI9XkL+U61Goj3GO173XwWiPXNr+EAF0aE9gWaAOwugoT2gEm0/InShPfi11mDJSKE9sSQuM9EgoT2QZ/aYqfugPZR+L5JS2aA9SHvf46u4oD2sXQaOtZmgPfscIa7/fKA9hNO469lgoD0zXsG8hEegPR3gRqu/LqA9tkdD8qoXoD3GnTl0tgGgPZTEU2LE2Z89nU003Buwnz2RswjMs4ifPYQZ3btLYZ89Y1ylISQ8nz23jWfCHBifPZXQLyj18p49XvDrAw7Qnj0nEKjfJq2ePfEvZLs/ip49pSwUDZlpnj3OF76ZEkqePW3xYWGsK549gbn/Y2YOnj1qO4VSofWdPZ9l7Gd94p09qUk7adrTnT3+1WuR2MqdPchQlvT2wp09fai0zVW9nT0zANOmtLedPdI05fVTtJ096FfxfxOynT2HjAPPsq6dPZ2vD1lyrJ09stIb4zGqnT3H9Sdt8aedPdwYNPewpZ093Bg097ClnT1nKjq8kKSdPXxNRkZQop09B19MCzChnT2ScFLQD6CdPRyCWJXvnp09p5NeWs+dnT2nk15az52dPTGlZB+vnJ09MaVkH6+cnT1HyHCpbpqdPUfIcKlump09R8hwqW6anT3R2XZuTpmdPTGlZB+vnJ09XOt8My6YnT1c63wzLpidPeb8gvgNl509cQ6Jve2VnT38H4+CzZSdPfwfj4LNlJ095vyC+A2XnT2GMZVHrZOdPRFDmwyNkp09nFSh0WyRnT2cVKHRbJGdPZxUodFskZ09JmanlkyQnT2xd61bLI+dPbF3rVssj509O4mzIAyOnT07ibMgDI6dPTuJsyAMjp09xpq55euMnT3Gmrnl64ydPVGsv6rLi509xpq55euMnT0AAAAAAAD4fw==","dtype":"float64","shape":[101]},"Name":["CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM","CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM"],"voltage":{"__ndarray__":"AAAAAAAAFEAAAAAAAAAkQAAAAAAAAC5AAAAAAAAANEAAAAAAAAA5QAAAAAAAAD5AAAAAAACAQUAAAAAAAABEQAAAAAAAgEZAAAAAAAAASUAAAAAAAIBLQAAAAAAAAE5AAAAAAABAUEAAAAAAAIBRQAAAAAAAwFJAAAAAAAAAVEAAAAAAAEBVQAAAAAAAgFZAAAAAAADAV0AAAAAAAABZQAAAAAAAQFpAAAAAAACAW0AAAAAAAMBcQAAAAAAAAF5AAAAAAABAX0AAAAAAAEBgQAAAAAAA4GBAAAAAAACAYUAAAAAAACBiQAAAAAAAwGJAAAAAAABgY0AAAAAAAABkQAAAAAAAoGRAAAAAAABAZUAAAAAAAOBlQAAAAAAAgGZAAAAAAAAgZ0AAAAAAAMBnQAAAAAAAYGhAAAAAAAAAaUAAAAAAAKBpQAAAAAAAQGpAAAAAAADgakAAAAAAAIBrQAAAAAAAIGxAAAAAAADAbEAAAAAAAGBtQAAAAAAAAG5AAAAAAACgbkAAAAAAAEBvQAAAAAAA4G9AAAAAAABAcEAAAAAAAJBwQAAAAAAA4HBAAAAAAAAwcUAAAAAAAIBxQAAAAAAA0HFAAAAAAAAgckAAAAAAAHByQAAAAAAAwHJAAAAAAAAQc0AAAAAAAGBzQAAAAAAAsHNAAAAAAAAAdEAAAAAAAFB0QAAAAAAAoHRAAAAAAADwdEAAAAAAAEB1QAAAAAAAkHVAAAAAAADgdUAAAAAAADB2QAAAAAAAgHZAAAAAAADQdkAAAAAAACB3QAAAAAAAcHdAAAAAAADAd0AAAAAAABB4QAAAAAAAYHhAAAAAAACweEAAAAAAAAB5QAAAAAAAoHlAAAAAAABAekAAAAAAAOB6QAAAAAAAgHtAAAAAAAAgfEAAAAAAAMB8QAAAAAAAYH1AAAAAAAAAfkAAAAAAAKB+QAAAAAAAQH9AAAAAAADgf0AAAAAAAECAQAAAAAAAkIBAAAAAAADggEAAAAAAADCBQAAAAAAAgIFAAAAAAADQgUAAAAAAACCCQAAAAAAAcIJAAAAAAADAgkAAAAAAAAD4fw==","dtype":"float64","shape":[101]}},"selected":{"id":"8828","type":"Selection"},"selection_policy":{"id":"8860","type":"UnionRenderers"}},"id":"8827","type":"ColumnDataSource"},{"attributes":{"line_alpha":0.1,"line_color":"#6d904f","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8867","type":"Line"},{"attributes":{"line_color":"#8b8b8b","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8887","type":"Line"},{"attributes":{"label":{"value":"CV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_15_23_PM"},"renderers":[{"id":"8833","type":"GlyphRenderer"}]},"id":"8843","type":"LegendItem"},{"attributes":{"line_alpha":0.1,"line_color":"#8b8b8b","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8888","type":"Line"},{"attributes":{},"id":"8864","type":"Selection"},{"attributes":{},"id":"8885","type":"Selection"},{"attributes":{"source":{"id":"8844","type":"ColumnDataSource"}},"id":"8851","type":"CDSView"},{"attributes":{"data_source":{"id":"8884","type":"ColumnDataSource"},"glyph":{"id":"8887","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"8889","type":"Line"},"nonselection_glyph":{"id":"8888","type":"Line"},"selection_glyph":null,"view":{"id":"8891","type":"CDSView"}},"id":"8890","type":"GlyphRenderer"},{"attributes":{"line_alpha":0.2,"line_color":"#30a2da","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8816","type":"Line"},{"attributes":{"line_color":"#e5ae38","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8847","type":"Line"},{"attributes":{"source":{"id":"8884","type":"ColumnDataSource"}},"id":"8891","type":"CDSView"},{"attributes":{"axis_label":"voltage (V)","axis_label_text_font_size":{"value":"24pt"},"bounds":"auto","formatter":{"id":"8805","type":"BasicTickFormatter"},"major_label_orientation":"horizontal","major_label_text_font_size":{"value":"24pt"},"ticker":{"id":"8784","type":"BasicTicker"}},"id":"8783","type":"LinearAxis"},{"attributes":{"line_alpha":0.2,"line_color":"#fc4f30","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8832","type":"Line"},{"attributes":{},"id":"8841","type":"UnionRenderers"},{"attributes":{},"id":"8904","type":"UnionRenderers"},{"attributes":{},"id":"8784","type":"BasicTicker"},{"attributes":{"line_alpha":0.1,"line_color":"#30a2da","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8815","type":"Line"},{"attributes":{"line_color":"#30a2da","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8814","type":"Line"},{"attributes":{},"id":"8881","type":"UnionRenderers"},{"attributes":{"dimension":1,"grid_line_color":"black","grid_line_dash":[10,4],"grid_line_width":1.5,"minor_grid_line_color":"lightgray","ticker":{"id":"8789","type":"BasicTicker"}},"id":"8792","type":"Grid"},{"attributes":{},"id":"8812","type":"Selection"},{"attributes":{"line_alpha":0.1,"line_color":"#e5ae38","line_width":2,"x":{"field":"voltage"},"y":{"field":"C10K"}},"id":"8848","type":"Line"},{"attributes":{"callback":null,"data":{"C10K":{"__ndarray__":"fCo0Xhcitj2hc8kpwBuxPYYxlUetk609qVyEJFzOqj00K9Ttl+SoPXsYajVOfKc92jlXndRipj0AGqT21X6lPW6LmX3PwqQ9Ukb3xu4ipD2M6PO/EZWjPdY7VcJFDKM9MpuJVZCjoj1eQv5TrUaiPXBUv0dc86E98uLS9XyooT0f5bV7n2ahPQ1+dGODK6E95fMmwafyoD0dNcfPLL2gPfE40qyii6A96RBOHelcoD3ddiINgTWgPVvu/MH4DKA9/nOQFILOnz0bxQ6Rk4efPZjher4FRJ89dsnUnNgDnz2zfBwsDMeePVH7UWygjZ49T0V1XZVXnj03bIzEyiOePZWBnWYg8Z09U2KcudbBnT38H4+CzZSdPRrMe4bkaJ09I1VcADw/nT0s3jx6kxWdPapVFy8L7Zw9E6rlWcPGnD3y7K2/m6GcPdAvdiV0fJw9rnI+i0xXnD2NtQbxJDKcPVbVwsw9D5w9H/V+qFbsmz1eAzW/j8qbPYfu3ksJq5s9EaV2ieOOmz3lA/DtXnibPQQLS3l7Z5s9+cuN8Bhbmz3ERrhTN1ObPe6M0Ge2Tps9GdPoezVKmz24B/vK1EabPc4qB1WURJs9WDwNGnRDmz1uXxmkM0GbPfhwH2kTQJs9g4IlLvM+mz0NlCvz0j2bPZilMbiyPJs9mKUxuLI8mz2tyD1CcjqbPa3IPUJyOps9ONpDB1I5mz042kMHUjmbPcPrScwxOJs9w+tJzDE4mz1N/U+RETebPU39T5ERN5s92A5WVvE1mz3YDlZW8TWbPdgOVlbxNZs9YiBcG9E0mz1iIFwb0TSbPWIgXBvRNJs97TFi4LAzmz3tMWLgsDObPe0xYuCwM5s9eENopZAymz14Q2ilkDKbPWIgXBvRNJs9YiBcG9E0mz3tMWLgsDObPY1mdC9QMJs9jWZ0L1Awmz0XeHr0Ly+bPRd4evQvL5s9F3h69C8vmz0XeHr0Ly+bPRd4evQvL5s9oomAuQ8umz2iiYC5Dy6bPS2bhn7vLJs9oomAuQ8umz2iiYC5Dy6bPS2bhn7vLJs9LZuGfu8smz0AAAAAAAD4fw==","dtype":"float64","shape":[101]},"Name":["CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM","CV_34254_025_PSS_HM_XX_DIODEHALFPSTOP_GRConnected_4_13_2021_5_47_11_PM"],"voltage":{"__ndarray__":"AAAAAAAAFEAAAAAAAAAkQAAAAAAAAC5AAAAAAAAANEAAAAAAAAA5QAAAAAAAAD5AAAAAAACAQUAAAAAAAABEQAAAAAAAgEZAAAAAAAAASUAAAAAAAIBLQAAAAAAAAE5AAAAAAABAUEAAAAAAAIBRQAAAAAAAwFJAAAAAAAAAVEAAAAAAAEBVQAAAAAAAgFZAAAAAAADAV0AAAAAAAABZQAAAAAAAQFpAAAAAAACAW0AAAAAAAMBcQAAAAAAAAF5AAAAAAABAX0AAAAAAAEBgQAAAAAAA4GBAAAAAAACAYUAAAAAAACBiQAAAAAAAwGJAAAAAAABgY0AAAAAAAABkQAAAAAAAoGRAAAAAAABAZUAAAAAAAOBlQAAAAAAAgGZAAAAAAAAgZ0AAAAAAAMBnQAAAAAAAYGhAAAAAAAAAaUAAAAAAAKBpQAAAAAAAQGpAAAAAAADgakAAAAAAAIBrQAAAAAAAIGxAAAAAAADAbEAAAAAAAGBtQAAAAAAAAG5AAAAAAACgbkAAAAAAAEBvQAAAAAAA4G9AAAAAAABAcEAAAAAAAJBwQAAAAAAA4HBAAAAAAAAwcUAAAAAAAIBxQAAAAAAA0HFAAAAAAAAgckAAAAAAAHByQAAAAAAAwHJAAAAAAAAQc0AAAAAAAGBzQAAAAAAAsHNAAAAAAAAAdEAAAAAAAFB0QAAAAAAAoHRAAAAAAADwdEAAAAAAAEB1QAAAAAAAkHVAAAAAAADgdUAAAAAAADB2QAAAAAAAgHZAAAAAAADQdkAAAAAAACB3QAAAAAAAcHdAAAAAAADAd0AAAAAAABB4QAAAAAAAYHhAAAAAAACweEAAAAAAAAB5QAAAAAAAoHlAAAAAAABAekAAAAAAAOB6QAAAAAAAgHtAAAAAAAAgfEAAAAAAAMB8QAAAAAAAYH1AAAAAAAAAfkAAAAAAAKB+QAAAAAAAQH9AAAAAAADgf0AAAAAAAECAQAAAAAAAkIBAAAAAAADggEAAAAAAADCBQAAAAAAAgIFAAAAAAADQgUAAAAAAACCCQAAAAAAAcIJAAAAAAADAgkAAAAAAAAD4fw==","dtype":"float64","shape":[101]}},"selected":{"id":"8864","type":"Selection"},"selection_policy":{"id":"8904","type":"UnionRenderers"}},"id":"8863","type":"ColumnDataSource"}],"root_ids":["8774"]},"title":"Bokeh Application","version":"1.3.4"}};
+  var render_items = [{"docid":"0e80ab81-3e6b-48f2-90dc-650aca19bd01","roots":{"8774":"18883a18-5ddd-436e-af4f-fccaf7dd02af"}}];
+  root.Bokeh.embed.embed_items_notebook(docs_json, render_items);
+
+  }
+  if (root.Bokeh !== undefined) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (root.Bokeh !== undefined) {
+        embed_document(root);
+        clearInterval(timer);
+      }
+      attempts++;
+      if (attempts > 100) {
+        console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+        clearInterval(timer);
+      }
+    }, 10, root)
+  }
+})(window);
+</script>
+</div>

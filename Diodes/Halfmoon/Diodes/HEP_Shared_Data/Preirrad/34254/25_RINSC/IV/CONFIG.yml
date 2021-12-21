@@ -1,0 +1,311 @@
+ASCII_file_specs:
+  data_separator: "\t"
+  data_start: 23
+  header_lines: 21
+  measurement_description: 22
+  measurement_regex: '[^\t]+|\t(?=\t)|\t$'
+  units_regex: '[^\t]+|\t(?=\t)|\t$'
+Analysis:
+- IVCV_Brown
+Files:
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_02_29_PM.txt
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_01_52_PM.txt
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_06_01_PM.txt
+IVCV_Brown:
+  1C2:
+    DoFullDepletionCalculation: true
+    PlotLabel: CV CURVES - Full depletion
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      legend_position: bottom_right
+      logx: false
+      logy: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      ylabel: 1/c^2 [1/F^2]
+  1C2_10K:
+    DoFullDepletionCalculation: true
+    PlotLabel: CV 10K - Full depletion
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      legend_position: bottom_right
+      logx: false
+      logy: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      ylabel: 1/c^2 [1/F^2]
+  Air_Temp:
+    AdditionalPlots:
+    - Histogram
+    PlotLabel: Air Temperature
+    PlotOptions:
+      show_grid: false
+  BoxWhiskerOptions:
+    box_alpha: 0.3
+    height: 1500
+    shared_axes: false
+    width: 2600
+  C10K:
+    PlotLabel: CV 10K
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      logx: false
+      logy: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      ylabel: capacitance [F]
+    UnitConversion: nano
+  CVQValue:
+    PlotLabel: Q-Value CV measurement
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      xformatter: '%.0f'
+      yformatter: '%.0f'
+    ToolsOptions:
+      yaxisENG: true
+    UnitConversion: mega
+  Dewpoint:
+    AdditionalPlots:
+    - Histogram
+    PlotLabel: Dew Point
+    PlotOptions:
+      show_grid: false
+  DoSpecialPlots:
+  - BoxWhisker
+  - Histogram
+  GR Current_Avg:
+    PlotLabel: Guard Ring Current
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      logx: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      xformatter: '%.0f'
+    UnitConversion: nano
+  General:
+    fontsize:
+      labels: 24
+      legend: 11
+      title: 28
+      xticks: 24
+      yticks: 24
+    height: 800
+    responsive: false
+    shared_axes: false
+    width: 1200
+  HistogramOptions:
+    shared_axes: false
+  Layout:
+    cols: 1
+  Measurement_aliases:
+    Bias Current_Avg: current
+    BiasVoltage: voltage
+    CV: capacitance
+    Humidity: humidity
+    IV: current
+    LCR_Cp_freq1: capacitance
+    LCR_Cp_freq1000.0: capacitance
+    LCR_Cp_freq10000.0: C10K
+    QValue: CVQValue
+    Temperature: temperature
+    Voltage: voltage
+  Total Current_Avg:
+    PlotLabel: Total Current
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      logx: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      xformatter: '%.0f'
+    UnitConversion: nano
+  capacitance:
+    PlotLabel: CV CURVES
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      logx: false
+      logy: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      ylabel: capacitance [F]
+    UnitConversion: nano
+  current:
+    PlotLabel: IV CURVES
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      legend_position: bottom_right
+      logx: false
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      xformatter: '%.0f'
+    ToolsOptions:
+      yaxisENG: true
+    UnitConversion: nano
+  current_20C:
+    PlotLabel: IV CURVES (scaled to 20C)
+    PlotOptions:
+      gridstyle:
+        grid_line_color: black
+        grid_line_width: 1.5
+        minor_xgrid_line_color: lightgray
+        minor_ygrid_line_color: lightgray
+        xgrid_line_dash:
+        - 4
+        - 4
+        ygrid_line_dash:
+        - 10
+        - 4
+      invert_xaxis: false
+      invert_yaxis: false
+      logx: false
+      logy: true
+      padding: !!python/tuple
+      - 0
+      - 0.1
+      shared_axes: false
+      show_grid: true
+      xformatter: '%.0f'
+    ToolsOptions:
+      yaxisENG: true
+    UnitConversion: nano
+  humidity:
+    AdditionalPlots:
+    - Histogram
+    PlotLabel: Humidity
+    PlotOptions:
+      show_grid: false
+  temperature:
+    AdditionalPlots:
+    - Histogram
+    PlotLabel: Temperature
+    PlotOptions:
+      show_grid: false
+  xml_template: CVIV_XML_TEMPLATE.YML
+Output: S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV
+backend: bokeh
+file_order:
+- - IV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_02_29_PM
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODE_4_12_2021_6_02_29_PM.txt
+- - IV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_01_52_PM
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODEHALF_4_13_2021_4_01_52_PM.txt
+- - IV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_06_01_PM
+- S:/Testing/Irradiation Studies/Pre-Production/Preirrad/34254/25/IV_34254_025_PSS_HM_XX_DIODEQUARTER_4_13_2021_6_06_01_PM.txt

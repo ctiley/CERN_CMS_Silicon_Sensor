@@ -1,0 +1,28 @@
+GCD Test
+Bias: 5000.000000
+IV_D0_CO138_LargeDiode_GRConnected_Irradiated_10min_at_60C
+Date/Time: 7/30/2021 1:26:40 PM
+Sensor Name: CO139
+Type: N
+Annealing Status: Irradiated, Annealed at 60C for 10 Minutes
+Environment: -20C
+Tester: Andrew Kent
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.000
+
+
+BiasVoltage	Total Current_Avg	Total Current_0	Total Current_1	Total Current_2	Total Current_3	Bias Current_Avg	Bias Current_0	Bias Current_1	Bias Current_2	Bias Current_3	Temperature	Air_Temp	Humidity	Dewpoint	
+    1.0000	-6.5425E-10	-6.2600E-10	-5.9500E-10	-6.9500E-10	-7.0100E-10	-1.904727E-12	-1.965229E-12	-1.833836E-12	-1.881912E-12	-1.937932E-12	  -20.0160	   14.7742	    4.6749	  -25.2340	
+    2.0000	-5.8325E-10	-6.7000E-10	-6.0700E-10	-5.8900E-10	-4.6700E-10	-1.655793E-12	-1.766815E-12	-1.669645E-12	-1.603440E-12	-1.583273E-12	  -20.0135	   14.7790	    4.6607	  -25.2641	
+    3.0000	-4.6425E-10	-5.2800E-10	-5.2900E-10	-3.8500E-10	-4.1500E-10	-1.989266E-12	-1.881911E-12	-2.479391E-12	-1.935487E-12	-1.660275E-12	  -20.0160	   14.7659	    4.6626	  -25.2690	
+    4.0000	-4.3650E-10	-3.7900E-10	-3.8300E-10	-4.5700E-10	-5.2700E-10	-1.646729E-12	-1.795946E-12	-2.093769E-12	-1.440880E-12	-1.256319E-12	  -20.0084	   14.7562	    4.6581	  -25.2863	
+    5.0000	-3.5975E-10	-4.2700E-10	-4.1500E-10	-2.6900E-10	-3.2800E-10	-1.863373E-12	-1.837910E-12	-1.898004E-12	-1.929171E-12	-1.788409E-12	  -20.0059	   14.7385	    4.6423	  -25.3362	
+    6.0000	 0.0000E+0	 0.0000E+0	 0.0000E+0	 0.0000E+0	 0.0000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	    0.0000	    0.0000	    0.0000	    0.0000	

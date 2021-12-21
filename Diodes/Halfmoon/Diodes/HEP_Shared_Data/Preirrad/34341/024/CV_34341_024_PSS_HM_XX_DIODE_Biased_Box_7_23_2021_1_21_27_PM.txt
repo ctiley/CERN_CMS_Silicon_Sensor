@@ -1,0 +1,25 @@
+GCD Test
+Bias: 5000.000000
+CV_34341_024_PSS_HM_XX_DIODE_Biased_Box
+Date/Time: 7/23/2021 1:21:27 PM
+Sensor Name: DIODE
+Type: P
+Annealing Status: Not Irradiated
+Environment: 20C
+Tester: Andrew Kent
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 1.000
+
+IV Time Delay per Measurement (s) :0.000
+
+
+BiasVoltage	LCR_Cp_freqNaN	LCR_Rp_freqNaN	Temperature	Air_Temp	Humidity	Dewpoint	
+   -5.0000	3.996E-12	2.923E+9	   20.0039	   22.0231	   29.1758	    3.2655	
+  -10.0000	3.997E-12	2.582E+9	   20.0039	   22.0231	   29.1758	    3.2655	
+  -15.0000	3.996E-12	2.474E+9	    0.0000	    0.0000	    0.0000	    0.0000	

@@ -1,0 +1,804 @@
+
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-gl-1.3.4.min.js" type="text/javascript"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+<script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.20/require.min.js" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" type="text/javascript"></script>
+<script type="text/javascript">function HoloViewsWidget() {
+}
+
+HoloViewsWidget.prototype.init_slider = function(init_val){
+  if(this.load_json) {
+    this.from_json()
+  } else {
+    this.update_cache();
+  }
+}
+
+HoloViewsWidget.prototype.populate_cache = function(idx){
+  this.cache[idx].innerHTML = this.frames[idx];
+  if (this.embed) {
+    delete this.frames[idx];
+  }
+}
+
+HoloViewsWidget.prototype.process_error = function(msg){
+}
+
+HoloViewsWidget.prototype.from_json = function() {
+  var data_url = this.json_path + this.id + '.json';
+  $.getJSON(data_url, $.proxy(function(json_data) {
+    this.frames = json_data;
+    this.update_cache();
+    this.update(0);
+  }, this));
+}
+
+HoloViewsWidget.prototype.dynamic_update = function(current){
+  if (current === undefined) {
+    return
+  }
+  this.current = current;
+  if (this.comm) {
+    var msg = {comm_id: this.id+'_client', content: current}
+    this.comm.send(msg);
+  }
+}
+
+HoloViewsWidget.prototype.update_cache = function(force){
+  var frame_len = Object.keys(this.frames).length;
+  for (var i=0; i<frame_len; i++) {
+    if(!this.load_json || this.dynamic)  {
+      var frame = Object.keys(this.frames)[i];
+    } else {
+      var frame = i;
+    }
+    if(!(frame in this.cache) || force) {
+      if ((frame in this.cache) && force) { this.cache[frame].remove() }
+      var div = document.createElement("div");
+      var parent = document.getElementById("_anim_img"+this.id);
+      div.style.display = "none";
+      parent.appendChild(div)
+      this.cache[frame] = div;
+      var cache_id = "_anim_img"+this.id+"_"+frame;
+      this.populate_cache(frame);
+    }
+  }
+}
+
+HoloViewsWidget.prototype.update = function(current){
+  if(current in this.cache) {
+    for (var index in this.cache) {
+      this.cache[index].style.display = "none";
+    }
+    this.cache[current].style.display = "";
+    this.wait = false;
+  }
+}
+
+HoloViewsWidget.prototype.init_comms = function() {
+  var that = this
+  HoloViews.comm_manager.register_target(this.plot_id, this.id, function (msg) { that.msg_handler(msg) })
+  if (!this.cached || this.dynamic) {
+    function ack_callback(msg) {
+      var msg = msg.metadata;
+      var comm_id = msg.comm_id;
+      var comm_status = HoloViews.comm_status[comm_id];
+      if (that.queue.length > 0) {
+        that.time = Date.now();
+        that.dynamic_update(that.queue[that.queue.length-1]);
+        that.queue = [];
+      } else {
+        that.wait = false;
+      }
+      if ((msg.msg_type == "Ready") && msg.content) {
+        console.log("Python callback returned following output:", msg.content);
+      } else if (msg.msg_type == "Error") {
+        console.log("Python failed with the following traceback:", msg.traceback)
+      }
+    }
+    var comm = HoloViews.comm_manager.get_client_comm(this.plot_id, this.id+'_client', ack_callback);
+    return comm
+  }
+}
+
+HoloViewsWidget.prototype.msg_handler = function(msg) {
+  var metadata = msg.metadata;
+  if ((metadata.msg_type == "Ready")) {
+    if (metadata.content) {
+      console.log("Python callback returned following output:", metadata.content);
+    }
+	return;
+  } else if (metadata.msg_type == "Error") {
+    console.log("Python failed with the following traceback:", metadata.traceback)
+    return
+  }
+  this.process_msg(msg)
+}
+
+HoloViewsWidget.prototype.process_msg = function(msg) {
+}
+
+function SelectionWidget(frames, id, slider_ids, keyMap, dim_vals, notFound, load_json, mode, cached, json_path, dynamic, plot_id){
+  this.frames = frames;
+  this.id = id;
+  this.plot_id = plot_id;
+  this.slider_ids = slider_ids;
+  this.keyMap = keyMap
+  this.current_frame = 0;
+  this.current_vals = dim_vals;
+  this.load_json = load_json;
+  this.mode = mode;
+  this.notFound = notFound;
+  this.cached = cached;
+  this.dynamic = dynamic;
+  this.cache = {};
+  this.json_path = json_path;
+  this.init_slider(this.current_vals[0]);
+  this.queue = [];
+  this.wait = false;
+  if (!this.cached || this.dynamic) {
+    this.comm = this.init_comms();
+  }
+}
+
+SelectionWidget.prototype = new HoloViewsWidget;
+
+
+SelectionWidget.prototype.get_key = function(current_vals) {
+  var key = "(";
+  for (var i=0; i<this.slider_ids.length; i++)
+  {
+    var val = this.current_vals[i];
+    if (!(typeof val === 'string')) {
+      if (val % 1 === 0) { val = val.toFixed(1); }
+      else { val = val.toFixed(10); val = val.slice(0, val.length-1);}
+    }
+    key += "'" + val + "'";
+    if(i != this.slider_ids.length-1) { key += ', ';}
+    else if(this.slider_ids.length == 1) { key += ',';}
+  }
+  key += ")";
+  return this.keyMap[key];
+}
+
+SelectionWidget.prototype.set_frame = function(dim_val, dim_idx){
+  this.current_vals[dim_idx] = dim_val;
+  var key = this.current_vals;
+  if (!this.dynamic) {
+    key = this.get_key(key)
+  }
+  if (this.dynamic || !this.cached) {
+    if ((this.time !== undefined) && ((this.wait) && ((this.time + 10000) > Date.now()))) {
+      this.queue.push(key);
+      return
+    }
+    this.queue = [];
+    this.time = Date.now();
+    this.current_frame = key;
+    this.wait = true;
+    this.dynamic_update(key)
+  } else if (key !== undefined) {
+    this.update(key)
+  }
+}
+
+
+/* Define the ScrubberWidget class */
+function ScrubberWidget(frames, num_frames, id, interval, load_json, mode, cached, json_path, dynamic, plot_id){
+  this.slider_id = "_anim_slider" + id;
+  this.loop_select_id = "_anim_loop_select" + id;
+  this.id = id;
+  this.plot_id = plot_id;
+  this.interval = interval;
+  this.current_frame = 0;
+  this.direction = 0;
+  this.dynamic = dynamic;
+  this.timer = null;
+  this.load_json = load_json;
+  this.mode = mode;
+  this.cached = cached;
+  this.frames = frames;
+  this.cache = {};
+  this.length = num_frames;
+  this.json_path = json_path;
+  document.getElementById(this.slider_id).max = this.length - 1;
+  this.init_slider(0);
+  this.wait = false;
+  this.queue = [];
+  if (!this.cached || this.dynamic) {
+    this.comm = this.init_comms()
+  }
+}
+
+ScrubberWidget.prototype = new HoloViewsWidget;
+
+ScrubberWidget.prototype.set_frame = function(frame){
+  this.current_frame = frame;
+  var widget = document.getElementById(this.slider_id);
+  if (widget === null) {
+    this.pause_animation();
+    return
+  }
+  widget.value = this.current_frame;
+  if (this.dynamic || !this.cached) {
+    if ((this.time !== undefined) && ((this.wait) && ((this.time + 10000) > Date.now()))) {
+      this.queue.push(frame);
+      return
+    }
+    this.queue = [];
+    this.time = Date.now();
+    this.wait = true;
+    this.dynamic_update(frame)
+  } else {
+    this.update(frame)
+  }
+}
+
+ScrubberWidget.prototype.get_loop_state = function(){
+  var button_group = document[this.loop_select_id].state;
+  for (var i = 0; i < button_group.length; i++) {
+    var button = button_group[i];
+    if (button.checked) {
+      return button.value;
+    }
+  }
+  return undefined;
+}
+
+
+ScrubberWidget.prototype.next_frame = function() {
+  this.set_frame(Math.min(this.length - 1, this.current_frame + 1));
+}
+
+ScrubberWidget.prototype.previous_frame = function() {
+  this.set_frame(Math.max(0, this.current_frame - 1));
+}
+
+ScrubberWidget.prototype.first_frame = function() {
+  this.set_frame(0);
+}
+
+ScrubberWidget.prototype.last_frame = function() {
+  this.set_frame(this.length - 1);
+}
+
+ScrubberWidget.prototype.slower = function() {
+  this.interval /= 0.7;
+  if(this.direction > 0){this.play_animation();}
+  else if(this.direction < 0){this.reverse_animation();}
+}
+
+ScrubberWidget.prototype.faster = function() {
+  this.interval *= 0.7;
+  if(this.direction > 0){this.play_animation();}
+  else if(this.direction < 0){this.reverse_animation();}
+}
+
+ScrubberWidget.prototype.anim_step_forward = function() {
+  if(this.current_frame < this.length - 1){
+    this.next_frame();
+  }else{
+    var loop_state = this.get_loop_state();
+    if(loop_state == "loop"){
+      this.first_frame();
+    }else if(loop_state == "reflect"){
+      this.last_frame();
+      this.reverse_animation();
+    }else{
+      this.pause_animation();
+      this.last_frame();
+    }
+  }
+}
+
+ScrubberWidget.prototype.anim_step_reverse = function() {
+  if(this.current_frame > 0){
+    this.previous_frame();
+  } else {
+    var loop_state = this.get_loop_state();
+    if(loop_state == "loop"){
+      this.last_frame();
+    }else if(loop_state == "reflect"){
+      this.first_frame();
+      this.play_animation();
+    }else{
+      this.pause_animation();
+      this.first_frame();
+    }
+  }
+}
+
+ScrubberWidget.prototype.pause_animation = function() {
+  this.direction = 0;
+  if (this.timer){
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+}
+
+ScrubberWidget.prototype.play_animation = function() {
+  this.pause_animation();
+  this.direction = 1;
+  var t = this;
+  if (!this.timer) this.timer = setInterval(function(){t.anim_step_forward();}, this.interval);
+}
+
+ScrubberWidget.prototype.reverse_animation = function() {
+  this.pause_animation();
+  this.direction = -1;
+  var t = this;
+  if (!this.timer) this.timer = setInterval(function(){t.anim_step_reverse();}, this.interval);
+}
+
+function extend(destination, source) {
+  for (var k in source) {
+    if (source.hasOwnProperty(k)) {
+      destination[k] = source[k];
+    }
+  }
+  return destination;
+}
+
+function update_widget(widget, values) {
+  if (widget.hasClass("ui-slider")) {
+    widget.slider('option', {
+      min: 0,
+      max: values.length-1,
+      dim_vals: values,
+      value: 0,
+      dim_labels: values
+    })
+    widget.slider('option', 'slide').call(widget, event, {value: 0})
+  } else {
+    widget.empty();
+    for (var i=0; i<values.length; i++){
+      widget.append($("<option>", {
+        value: i,
+        text: values[i]
+      }))
+    };
+    widget.data('values', values);
+    widget.data('value', 0);
+    widget.trigger("change");
+  };
+}
+
+function init_slider(id, plot_id, dim, values, next_vals, labels, dynamic, step, value, next_dim,
+                     dim_idx, delay, jQueryUI_CDN, UNDERSCORE_CDN) {
+  // Slider JS Block START
+  function loadcssfile(filename){
+    var fileref=document.createElement("link")
+    fileref.setAttribute("rel", "stylesheet")
+    fileref.setAttribute("type", "text/css")
+    fileref.setAttribute("href", filename)
+    document.getElementsByTagName("head")[0].appendChild(fileref)
+  }
+  loadcssfile("https://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css");
+  /* Check if jQuery and jQueryUI have been loaded
+     otherwise load with require.js */
+  var jQuery = window.jQuery,
+    // check for old versions of jQuery
+    oldjQuery = jQuery && !!jQuery.fn.jquery.match(/^1\.[0-4](\.|$)/),
+    jquery_path = '',
+    paths = {},
+    noConflict;
+  var jQueryUI = jQuery.ui;
+  // check for jQuery
+  if (!jQuery || oldjQuery) {
+    // load if it's not available or doesn't meet min standards
+    paths.jQuery = jQuery;
+    noConflict = !!oldjQuery;
+  } else {
+    // register the current jQuery
+    define('jquery', [], function() { return jQuery; });
+  }
+  if (!jQueryUI) {
+    paths.jQueryUI = jQueryUI_CDN.slice(null, -3);
+  } else {
+    define('jQueryUI', [], function() { return jQuery.ui; });
+  }
+  paths.underscore = UNDERSCORE_CDN.slice(null, -3);
+  var jquery_require = {
+    paths: paths,
+    shim: {
+      "jQueryUI": {
+        exports:"$",
+        deps: ['jquery']
+      },
+      "underscore": {
+        exports: '_'
+      }
+    }
+  }
+  require.config(jquery_require);
+  require(["jQueryUI", "underscore"], function(jUI, _){
+    if (noConflict) $.noConflict(true);
+    var vals = values;
+    if (dynamic && vals.constructor === Array) {
+      var default_value = parseFloat(value);
+      var min = parseFloat(vals[0]);
+      var max = parseFloat(vals[vals.length-1]);
+      var wstep = step;
+      var wlabels = [default_value];
+      var init_label = default_value;
+    } else {
+      var min = 0;
+      if (dynamic) {
+        var max = Object.keys(vals).length - 1;
+        var init_label = labels[value];
+        var default_value = values[value];
+      } else {
+        var max = vals.length - 1;
+        var init_label = labels[value];
+        var default_value = value;
+      }
+      var wstep = 1;
+      var wlabels = labels;
+    }
+    function adjustFontSize(text) {
+      var width_ratio = (text.parent().width()/8)/text.val().length;
+      var size = Math.min(0.9, Math.max(0.6, width_ratio))+'em';
+      text.css('font-size', size);
+    }
+    var slider = $('#_anim_widget'+id+'_'+dim);
+    slider.slider({
+      animate: "fast",
+      min: min,
+      max: max,
+      step: wstep,
+      value: default_value,
+      dim_vals: vals,
+      dim_labels: wlabels,
+      next_vals: next_vals,
+      slide: function(event, ui) {
+        var vals = slider.slider("option", "dim_vals");
+        var next_vals = slider.slider("option", "next_vals");
+        var dlabels = slider.slider("option", "dim_labels");
+        if (dynamic) {
+          var dim_val = ui.value;
+          if (vals.constructor === Array) {
+            var label = ui.value;
+          } else {
+            var label = dlabels[ui.value];
+          }
+        } else {
+          var dim_val = vals[ui.value];
+          var label = dlabels[ui.value];
+        }
+        var text = $('#textInput'+id+'_'+dim);
+        text.val(label);
+        adjustFontSize(text);
+        HoloViews.index[plot_id].set_frame(dim_val, dim_idx);
+        if (Object.keys(next_vals).length > 0) {
+          var new_vals = next_vals[dim_val];
+          var next_widget = $('#_anim_widget'+id+'_'+next_dim);
+          update_widget(next_widget, new_vals);
+        }
+      }
+    });
+    slider.keypress(function(event) {
+      if (event.which == 80 || event.which == 112) {
+        var start = slider.slider("option", "value");
+        var stop =  slider.slider("option", "max");
+        for (var i=start; i<=stop; i++) {
+          var delay = i*delay;
+          $.proxy(function doSetTimeout(i) { setTimeout($.proxy(function() {
+            var val = {value:i};
+            slider.slider('value',i);
+            slider.slider("option", "slide")(null, val);
+          }, slider), delay);}, slider)(i);
+        }
+      }
+      if (event.which == 82 || event.which == 114) {
+        var start = slider.slider("option", "value");
+        var stop =  slider.slider("option", "min");
+        var count = 0;
+        for (var i=start; i>=stop; i--) {
+          var delay = count*delay;
+          count = count + 1;
+          $.proxy(function doSetTimeout(i) { setTimeout($.proxy(function() {
+            var val = {value:i};
+            slider.slider('value',i);
+            slider.slider("option", "slide")(null, val);
+          }, slider), delay);}, slider)(i);
+        }
+      }
+    });
+    var textInput = $('#textInput'+id+'_'+dim)
+    textInput.val(init_label);
+    adjustFontSize(textInput);
+  });
+}
+
+function init_dropdown(id, plot_id, dim, vals, value, next_vals, labels, next_dim, dim_idx, dynamic) {
+  var widget = $("#_anim_widget"+id+'_'+dim);
+  widget.data('values', vals)
+  for (var i=0; i<vals.length; i++){
+    if (dynamic) {
+      var val = vals[i];
+    } else {
+      var val = i;
+    }
+    widget.append($("<option>", {
+      value: val,
+      text: labels[i]
+    }));
+  };
+  widget.data("next_vals", next_vals);
+  widget.val(value);
+  widget.on('change', function(event, ui) {
+    if (dynamic) {
+      var dim_val = parseInt(this.value);
+    } else {
+      var dim_val = $.data(this, 'values')[this.value];
+    }
+    var next_vals = $.data(this, "next_vals");
+    if (Object.keys(next_vals).length > 0) {
+      var new_vals = next_vals[dim_val];
+      var next_widget = $('#_anim_widget'+id+'_'+next_dim);
+      update_widget(next_widget, new_vals);
+    }
+    var widgets = HoloViews.index[plot_id]
+    if (widgets) {
+      widgets.set_frame(dim_val, dim_idx);
+    }
+  });
+}
+
+
+if (window.HoloViews === undefined) {
+  window.HoloViews = {}
+  window.PyViz = window.HoloViews
+} else if (window.PyViz === undefined) {
+  window.PyViz = window.HoloViews
+}
+
+
+var _namespace = {
+  init_slider: init_slider,
+  init_dropdown: init_dropdown,
+  comms: {},
+  comm_status: {},
+  index: {},
+  plot_index: {},
+  kernels: {},
+  receivers: {}
+}
+
+for (var k in _namespace) {
+  if (!(k in window.HoloViews)) {
+    window.HoloViews[k] = _namespace[k];
+  }
+}
+
+// Define Bokeh specific subclasses
+function BokehSelectionWidget() {
+  SelectionWidget.apply(this, arguments);
+}
+
+function BokehScrubberWidget() {
+  ScrubberWidget.apply(this, arguments);
+}
+
+// Let them inherit from the baseclasses
+BokehSelectionWidget.prototype = Object.create(SelectionWidget.prototype);
+BokehScrubberWidget.prototype = Object.create(ScrubberWidget.prototype);
+
+// Define methods to override on widgets
+var BokehMethods = {
+  update_cache : function(){
+    for (var index in this.frames) {
+      this.frames[index] = JSON.parse(this.frames[index]);
+    }
+  },
+  update : function(current){
+    if (current === undefined) {
+      return;
+    }
+    var data = this.frames[current];
+    if (data !== undefined) {
+      if (data.root in HoloViews.plot_index) {
+        var doc = HoloViews.plot_index[data.root].model.document;
+      } else {
+        var doc = Bokeh.index[data.root].model.document;
+      }
+      doc.apply_json_patch(data.content);
+    }
+  },
+  init_comms: function() {
+    if (Bokeh.protocol !== undefined) {
+      this.receiver = new Bokeh.protocol.Receiver()
+    } else {
+      this.receiver = null;
+    }
+    return HoloViewsWidget.prototype.init_comms.call(this);
+  },
+  process_msg : function(msg) {
+    if (this.plot_id in HoloViews.plot_index) {
+      var doc = HoloViews.plot_index[this.plot_id].model.document;
+    } else {
+      var doc = Bokeh.index[this.plot_id].model.document;
+    }
+    if (this.receiver === null) { return }
+    var receiver = this.receiver;
+    if (msg.buffers.length > 0) {
+      receiver.consume(msg.buffers[0].buffer)
+    } else {
+      receiver.consume(msg.content.data)
+    }
+    const comm_msg = receiver.message;
+    if ((comm_msg != null) && (doc != null)) {
+      doc.apply_json_patch(comm_msg.content, comm_msg.buffers)
+    }
+  }
+}
+
+// Extend Bokeh widgets with backend specific methods
+extend(BokehSelectionWidget.prototype, BokehMethods);
+extend(BokehScrubberWidget.prototype, BokehMethods);
+
+window.HoloViews.BokehSelectionWidget = BokehSelectionWidget
+window.HoloViews.BokehScrubberWidget = BokehScrubberWidget
+</script>
+<script type="text/javascript">
+    function CommManager() {
+    }
+
+    CommManager.prototype.register_target = function() {
+    }
+
+    CommManager.prototype.get_client_comm = function() {
+    }
+
+    window.PyViz.comm_manager = CommManager()
+    </script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+<style>div.hololayout {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+div.holoframe {
+  width: 75%;
+}
+
+div.holowell {
+  display: flex;
+  align-items: center;
+}
+
+form.holoform {
+  background-color: #fafafa;
+  border-radius: 5px;
+  overflow: hidden;
+  padding-left: 0.8em;
+  padding-right: 0.8em;
+  padding-top: 0.4em;
+  padding-bottom: 0.4em;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  border: 1px solid #e3e3e3;
+}
+
+div.holowidgets {
+  padding-right: 0;
+  width: 25%;
+}
+
+div.holoslider {
+  min-height: 0 !important;
+  height: 0.8em;
+  width: 100%;
+}
+
+div.holoformgroup {
+  padding-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+div.hologroup {
+  padding-left: 0;
+  padding-right: 0.8em;
+  width: 100%;
+}
+
+.holoselect {
+  width: 92%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.holotext {
+  padding-left:  0.5em;
+  padding-right: 0;
+  width: 100%;
+}
+
+.holowidgets .ui-resizable-se {
+  visibility: hidden
+}
+
+.holoframe > .ui-resizable-se {
+  visibility: hidden
+}
+
+.holowidgets .ui-resizable-s {
+  visibility: hidden
+}
+
+
+/* CSS rules for noUISlider based slider used by JupyterLab extension  */
+
+.noUi-handle {
+  width: 20px !important;
+  height: 20px !important;
+  left: -5px !important;
+  top: -5px !important;
+}
+
+.noUi-handle:before, .noUi-handle:after {
+  visibility: hidden;
+  height: 0px;
+}
+
+.noUi-target {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+div.bk-hbox {
+    display: flex;
+    justify-content: center;
+}
+
+div.bk-hbox div.bk-plot {
+    padding: 8px;
+}
+
+div.bk-hbox div.bk-data-table {
+    padding: 20px;
+}
+</style><div style='display: table; margin: 0 auto;'>
+
+
+
+
+
+
+  <div class="bk-root" id="93860453-e826-4122-bdfe-74593388122f" data-root-id="93119"></div>
+
+<script type="text/javascript">
+  (function(root) {
+  function embed_document(root) {
+    
+  var docs_json = {"8a9ddb55-5289-4add-81fe-c6466991d014":{"roots":{"references":[{"attributes":{"below":[{"id":"93128","type":"LinearAxis"}],"center":[{"id":"93132","type":"Grid"},{"id":"93137","type":"Grid"},{"id":"93168","type":"Legend"}],"left":[{"id":"93133","type":"LinearAxis"}],"margin":null,"min_border_bottom":10,"min_border_left":10,"min_border_right":10,"min_border_top":10,"plot_height":700,"plot_width":1200,"renderers":[{"id":"93160","type":"GlyphRenderer"},{"id":"93176","type":"GlyphRenderer"},{"id":"93193","type":"GlyphRenderer"}],"sizing_mode":"fixed","title":{"id":"93120","type":"Title"},"toolbar":{"id":"93143","type":"Toolbar"},"toolbar_location":"above","x_range":{"id":"93114","type":"Range1d"},"x_scale":{"id":"93124","type":"LinearScale"},"y_range":{"id":"93115","type":"Range1d"},"y_scale":{"id":"93126","type":"LinearScale"}},"id":"93119","subtype":"Figure","type":"Plot"},{"attributes":{},"id":"93138","type":"SaveTool"},{"attributes":{"label":{"value":"34252_008_PSS_XX_HM_IrradSensor_AfterAlibava"},"renderers":[{"id":"93160","type":"GlyphRenderer"}]},"id":"93169","type":"LegendItem"},{"attributes":{"bottom_units":"screen","fill_alpha":{"value":0.5},"fill_color":{"value":"lightgrey"},"left_units":"screen","level":"overlay","line_alpha":{"value":1.0},"line_color":{"value":"black"},"line_dash":[4,4],"line_width":{"value":2},"render_mode":"css","right_units":"screen","top_units":"screen"},"id":"93167","type":"BoxAnnotation"},{"attributes":{"line_alpha":0.2,"line_color":"#e5ae38","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93192","type":"Line"},{"attributes":{"source":{"id":"93187","type":"ColumnDataSource"}},"id":"93194","type":"CDSView"},{"attributes":{"label":{"value":"34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava"},"renderers":[{"id":"93176","type":"GlyphRenderer"}]},"id":"93186","type":"LegendItem"},{"attributes":{"label":{"value":"34252_008_PSS_XX_HM_IrradSensor_Unirrad"},"renderers":[{"id":"93193","type":"GlyphRenderer"}]},"id":"93205","type":"LegendItem"},{"attributes":{},"id":"93215","type":"UnionRenderers"},{"attributes":{},"id":"93202","type":"UnionRenderers"},{"attributes":{"callback":null,"renderers":[{"id":"93160","type":"GlyphRenderer"},{"id":"93176","type":"GlyphRenderer"},{"id":"93193","type":"GlyphRenderer"}],"tooltips":[["File","@Name"],["index","$index"],["(x,y)","($x, $y)"]]},"id":"93116","type":"HoverTool"},{"attributes":{"line_alpha":0.1,"line_color":"#30a2da","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93158","type":"Line"},{"attributes":{"callback":null,"data":{"Istrip_2":{"__ndarray__":"HcLq08dFjr4dwurTx0WOvpYAKe3wGI6+cGJn8ZIUjr50WD+oiAyOvqbeGyZWF46+ibcIe9Iojr6+jTZX/yiOvqFaABjII46+itxn+zoUjr7spesX4RiOvgvLtWDbJY6+P5cMMkcXjr7Fzc81Lx6OvhhiLw0ZI46+oyKeVbQVjr4XCgLvoS2OvsGkKeEqHI6+Ge0qyZ4ijr6KBlugqAOOvvTlhPYQDo6+GZyJ82wZjr6imu1bqjiOvshZxNxr642+EiOSQAkijr6ARu2HhjGOvpwPQLcEDI6+LAZ0+ncLjr7ypZeyLvmNvjVl3CLr842+pHeD2BgPjr7IX1c6+gmOvpD0Wb7vIY6+i23z7eULjr7JBd6SkAyOvuNew8kCEY6+L6Qek/YNjr7CmAZNdwWOvpbT6oUHB46+dGrycmEbjr7fiQbmQhSOvooqwTVaIY6+X1Y3GLvpjb77HEYDCQ+Ovi7Up7xbQo6+8thrng9Qjr4tf7zrJPyNvmuoNarjGo6+W/HqU3Dpjb6QP2UPKuaNvgTf/6Qd6Y2+i3kTWzD8jb7cIW9ffPGNvkq7zSP9G46+ST86cNQIjr6M19PWNRCOvs9mlWtfI46+Zeq/tQExjr7PtzZBkSyOvqEbGFtBdo6+","dtype":"float64","shape":[60]},"Name":["34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava","34252_008_PSS_XX_HM_IrradSensor_AfterAlibava"],"Pad":{"__ndarray__":"AAAAAAAA8D8AAAAAAAAAQAAAAAAAAAhAAAAAAAAAEEAAAAAAAAAUQAAAAAAAABhAAAAAAAAAHEAAAAAAAAAgQAAAAAAAACJAAAAAAAAAJEAAAAAAAAAmQAAAAAAAAChAAAAAAAAAKkAAAAAAAAAsQAAAAAAAAC5AAAAAAAAAMEAAAAAAAAAxQAAAAAAAADJAAAAAAAAAM0AAAAAAAAA0QAAAAAAAADVAAAAAAAAANkAAAAAAAAA3QAAAAAAAADhAAAAAAAAAOUAAAAAAAAA6QAAAAAAAADtAAAAAAAAAPEAAAAAAAAA9QAAAAAAAAD5AAAAAAAAAP0AAAAAAAABAQAAAAAAAgEBAAAAAAAAAQUAAAAAAAIBBQAAAAAAAAEJAAAAAAACAQkAAAAAAAABDQAAAAAAAgENAAAAAAAAAREAAAAAAAIBEQAAAAAAAAEVAAAAAAACARUAAAAAAAABGQAAAAAAAgEZAAAAAAAAAR0AAAAAAAIBHQAAAAAAAAEhAAAAAAACASEAAAAAAAABJQAAAAAAAgElAAAAAAAAASkAAAAAAAIBKQAAAAAAAAEtAAAAAAACAS0AAAAAAAABMQAAAAAAAgExAAAAAAAAATUAAAAAAAIBNQAAAAAAAAE5A","dtype":"float64","shape":[60]}},"selected":{"id":"93155","type":"Selection"},"selection_policy":{"id":"93183","type":"UnionRenderers"}},"id":"93154","type":"ColumnDataSource"},{"attributes":{"line_alpha":0.1,"line_color":"#fc4f30","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93174","type":"Line"},{"attributes":{},"id":"93134","type":"BasicTicker"},{"attributes":{},"id":"93183","type":"UnionRenderers"},{"attributes":{"active_drag":"auto","active_inspect":"auto","active_multi":null,"active_scroll":"auto","active_tap":"auto","tools":[{"id":"93116","type":"HoverTool"},{"id":"93138","type":"SaveTool"},{"id":"93139","type":"PanTool"},{"id":"93140","type":"WheelZoomTool"},{"id":"93141","type":"BoxZoomTool"},{"id":"93142","type":"ResetTool"}]},"id":"93143","type":"Toolbar"},{"attributes":{"callback":null,"data":{"Istrip_2":{"__ndarray__":"KDT2XcGDmb4oNPZdwYOZvlXsQv6xGpm+OuwwKrAPmb7gIBBGzgmZvubzgKCb/pi+9ivtgGr6mL5ausY/6vSYvmjE+Kav6pi++rmGpSnmmL5rbsOseN2Yvie8RO7/1pi+j5cncMzKmL6ID8WNosCYvmgjWRnctZi+ZMVC0K+xmL4t/YDqv6mYvrb74SuUopi+cBsp9BGWmL5CpA1zMY6YvoW53apLhpi+kXFyKr9+mL50euJazneYvomgSjJ7a5i+OnPZdfVemL4lXyFCuFOYvhBLaQ57SJi+CI6WNyk8mL5qSVVpAjKYvsJ7taaRKZi+vEaW8LIgmL6FRXY2jxaYvswz8TF1C5i+37R49YQAmL6Yu4Cq5PiXvgUtMgUY75e+prC3q77jl74d3EkPWNqXvrlSWkIE1Je+MA3WQS/Kl76bhmNcesCXvi1Dk4bAuZe+ORxD2Wmtl76NfC7OS6SXvopZGLBsmpe+zr09NMaTl741fPPCaIyXvuHyt0apg5e+9FVs0pV5l74/ExR7FnOXvgLyz3D/ape+FAPnFJpjl74qeUp9f1yXvg8+OH4wV5e+wbMFfy5Rl76axu42kUuXvpgGg4bjSZe+0AlFlyBMl77SENQGz16Xvr2iqHn6ope+","dtype":"float64","shape":[60]},"Name":["34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava","34252_008_PSS_XX_HM_IrradSensor_BeforeAlibava"],"Pad":{"__ndarray__":"AAAAAAAA8D8AAAAAAAAAQAAAAAAAAAhAAAAAAAAAEEAAAAAAAAAUQAAAAAAAABhAAAAAAAAAHEAAAAAAAAAgQAAAAAAAACJAAAAAAAAAJEAAAAAAAAAmQAAAAAAAAChAAAAAAAAAKkAAAAAAAAAsQAAAAAAAAC5AAAAAAAAAMEAAAAAAAAAxQAAAAAAAADJAAAAAAAAAM0AAAAAAAAA0QAAAAAAAADVAAAAAAAAANkAAAAAAAAA3QAAAAAAAADhAAAAAAAAAOUAAAAAAAAA6QAAAAAAAADtAAAAAAAAAPEAAAAAAAAA9QAAAAAAAAD5AAAAAAAAAP0AAAAAAAABAQAAAAAAAgEBAAAAAAAAAQUAAAAAAAIBBQAAAAAAAAEJAAAAAAACAQkAAAAAAAABDQAAAAAAAgENAAAAAAAAAREAAAAAAAIBEQAAAAAAAAEVAAAAAAACARUAAAAAAAABGQAAAAAAAgEZAAAAAAAAAR0AAAAAAAIBHQAAAAAAAAEhAAAAAAACASEAAAAAAAABJQAAAAAAAgElAAAAAAAAASkAAAAAAAIBKQAAAAAAAAEtAAAAAAACAS0AAAAAAAABMQAAAAAAAgExAAAAAAAAATUAAAAAAAIBNQAAAAAAAAE5A","dtype":"float64","shape":[60]}},"selected":{"id":"93171","type":"Selection"},"selection_policy":{"id":"93202","type":"UnionRenderers"}},"id":"93170","type":"ColumnDataSource"},{"attributes":{},"id":"93152","type":"BasicTickFormatter"},{"attributes":{},"id":"93155","type":"Selection"},{"attributes":{},"id":"93171","type":"Selection"},{"attributes":{"callback":null,"end":60.0,"reset_end":60.0,"reset_start":1.0,"start":1.0,"tags":[[["Pad","Pad",null]]]},"id":"93114","type":"Range1d"},{"attributes":{"axis_label":"Pad (#)","axis_label_text_font_size":{"value":"24pt"},"bounds":"auto","formatter":{"id":"93150","type":"BasicTickFormatter"},"major_label_orientation":"horizontal","major_label_text_font_size":{"value":"24pt"},"ticker":{"id":"93129","type":"BasicTicker"}},"id":"93128","type":"LinearAxis"},{"attributes":{"grid_line_color":null,"ticker":{"id":"93129","type":"BasicTicker"}},"id":"93132","type":"Grid"},{"attributes":{"text":"","text_color":{"value":"black"},"text_font_size":{"value":"28pt"}},"id":"93120","type":"Title"},{"attributes":{},"id":"93140","type":"WheelZoomTool"},{"attributes":{"axis_label":"Istrip_2 (A)","axis_label_text_font_size":{"value":"24pt"},"bounds":"auto","formatter":{"id":"93152","type":"BasicTickFormatter"},"major_label_orientation":"horizontal","major_label_text_font_size":{"value":"24pt"},"ticker":{"id":"93134","type":"BasicTicker"}},"id":"93133","type":"LinearAxis"},{"attributes":{},"id":"93142","type":"ResetTool"},{"attributes":{"callback":null,"end":3.776378455e-08,"reset_end":3.776378455e-08,"reset_start":-4.1819474405e-07,"start":-4.1819474405e-07,"tags":[[["Istrip_2","Istrip_2",null]]]},"id":"93115","type":"Range1d"},{"attributes":{"line_color":"#e5ae38","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93190","type":"Line"},{"attributes":{},"id":"93124","type":"LinearScale"},{"attributes":{"overlay":{"id":"93167","type":"BoxAnnotation"}},"id":"93141","type":"BoxZoomTool"},{"attributes":{"line_color":"#30a2da","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93157","type":"Line"},{"attributes":{"line_alpha":0.1,"line_color":"#e5ae38","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93191","type":"Line"},{"attributes":{},"id":"93126","type":"LinearScale"},{"attributes":{"source":{"id":"93170","type":"ColumnDataSource"}},"id":"93177","type":"CDSView"},{"attributes":{"line_color":"#fc4f30","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93173","type":"Line"},{"attributes":{"data_source":{"id":"93187","type":"ColumnDataSource"},"glyph":{"id":"93190","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"93192","type":"Line"},"nonselection_glyph":{"id":"93191","type":"Line"},"selection_glyph":null,"view":{"id":"93194","type":"CDSView"}},"id":"93193","type":"GlyphRenderer"},{"attributes":{},"id":"93150","type":"BasicTickFormatter"},{"attributes":{"line_alpha":0.2,"line_color":"#30a2da","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93159","type":"Line"},{"attributes":{},"id":"93139","type":"PanTool"},{"attributes":{},"id":"93188","type":"Selection"},{"attributes":{"data_source":{"id":"93154","type":"ColumnDataSource"},"glyph":{"id":"93157","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"93159","type":"Line"},"nonselection_glyph":{"id":"93158","type":"Line"},"selection_glyph":null,"view":{"id":"93161","type":"CDSView"}},"id":"93160","type":"GlyphRenderer"},{"attributes":{"line_alpha":0.2,"line_color":"#fc4f30","line_width":2,"x":{"field":"Pad"},"y":{"field":"Istrip_2"}},"id":"93175","type":"Line"},{"attributes":{},"id":"93129","type":"BasicTicker"},{"attributes":{"data_source":{"id":"93170","type":"ColumnDataSource"},"glyph":{"id":"93173","type":"Line"},"hover_glyph":null,"muted_glyph":{"id":"93175","type":"Line"},"nonselection_glyph":{"id":"93174","type":"Line"},"selection_glyph":null,"view":{"id":"93177","type":"CDSView"}},"id":"93176","type":"GlyphRenderer"},{"attributes":{"callback":null,"data":{"Istrip_2":{"__ndarray__":"khWfTggV8L2SFZ9OCBXwvYEk1IdcLPC96S/nMX/9772ZiELh1gHwve2SueeeG/C9FICecpkw8L21dKPYXTrwvdiVbm3EL/C9fYshjigP8L328wReJR3wveSgepAmJ/C9dbdhMmcY8L15cvvtfhvwvYsdZF4iE/C963qPWRUc8L2j9F9Q7DDwvdSJB22qf/C9N49fQjhZ8L1hdf7KJE7wvdhlPoEFVvC9q0isBThR8L3vJQz3ZWjwvSIDzmzB8vC97bDfDpYo8L0udCjLOSrwvVWg0NVuH/C9m9BcOnQ98L3xHSO390TwvRLMbunjcvC9J/3DnX5k8L01Ax6RE2HwvTiG08RpMvC99DbwguFH8L1bYEDxp0LwvVmaRsTVVfC9xQwGchlx8L3vutklWYfwvev5kShUlfC9/S6d+puN8L1+JMkKHVrwvdkuFuq4evC9yUNSObpx8L2zQYozflbwvY3kZ9PpdPC9KdWHbm2A8L2cKffNjZXwvYJHdzq1aPC9xr1l9cJ38L036IdOfW3wvchM3raImPC98JtplcFn8L0el20ja3fwvcqpeQY6Z/C9PDCtJFp78L2XDy7wg57wvWgVdMt6ofC9yMLigCSn8L0ahPXErnLwvWyUjIrf0fO9","dtype":"float64","shape":[60]},"Name":["34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad","34252_008_PSS_XX_HM_IrradSensor_Unirrad"],"Pad":{"__ndarray__":"AAAAAAAA8D8AAAAAAAAAQAAAAAAAAAhAAAAAAAAAEEAAAAAAAAAUQAAAAAAAABhAAAAAAAAAHEAAAAAAAAAgQAAAAAAAACJAAAAAAAAAJEAAAAAAAAAmQAAAAAAAAChAAAAAAAAAKkAAAAAAAAAsQAAAAAAAAC5AAAAAAAAAMEAAAAAAAAAxQAAAAAAAADJAAAAAAAAAM0AAAAAAAAA0QAAAAAAAADVAAAAAAAAANkAAAAAAAAA3QAAAAAAAADhAAAAAAAAAOUAAAAAAAAA6QAAAAAAAADtAAAAAAAAAPEAAAAAAAAA9QAAAAAAAAD5AAAAAAAAAP0AAAAAAAABAQAAAAAAAgEBAAAAAAAAAQUAAAAAAAIBBQAAAAAAAAEJAAAAAAACAQkAAAAAAAABDQAAAAAAAgENAAAAAAAAAREAAAAAAAIBEQAAAAAAAAEVAAAAAAACARUAAAAAAAABGQAAAAAAAgEZAAAAAAAAAR0AAAAAAAIBHQAAAAAAAAEhAAAAAAACASEAAAAAAAABJQAAAAAAAgElAAAAAAAAASkAAAAAAAIBKQAAAAAAAAEtAAAAAAACAS0AAAAAAAABMQAAAAAAAgExAAAAAAAAATUAAAAAAAIBNQAAAAAAAAE5A","dtype":"float64","shape":[60]}},"selected":{"id":"93188","type":"Selection"},"selection_policy":{"id":"93215","type":"UnionRenderers"}},"id":"93187","type":"ColumnDataSource"},{"attributes":{"dimension":1,"grid_line_color":null,"ticker":{"id":"93134","type":"BasicTicker"}},"id":"93137","type":"Grid"},{"attributes":{"click_policy":"mute","items":[{"id":"93169","type":"LegendItem"},{"id":"93186","type":"LegendItem"},{"id":"93205","type":"LegendItem"}],"label_text_font_size":{"value":"11pt"}},"id":"93168","type":"Legend"},{"attributes":{"source":{"id":"93154","type":"ColumnDataSource"}},"id":"93161","type":"CDSView"}],"root_ids":["93119"]},"title":"Bokeh Application","version":"1.3.4"}};
+  var render_items = [{"docid":"8a9ddb55-5289-4add-81fe-c6466991d014","roots":{"93119":"93860453-e826-4122-bdfe-74593388122f"}}];
+  root.Bokeh.embed.embed_items_notebook(docs_json, render_items);
+
+  }
+  if (root.Bokeh !== undefined) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (root.Bokeh !== undefined) {
+        embed_document(root);
+        clearInterval(timer);
+      }
+      attempts++;
+      if (attempts > 100) {
+        console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+        clearInterval(timer);
+      }
+    }, 10, root)
+  }
+})(window);
+</script>
+</div>
