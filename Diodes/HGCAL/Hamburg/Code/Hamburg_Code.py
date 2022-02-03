@@ -4,6 +4,8 @@ from scipy.optimize import curve_fit
 import pandas as pd
 from matplotlib.pyplot import figure
 
+#%%
+
 neff_N4789_20_LL_DIODE = []
 neff_N4789_20_LL_DIODEQUARTER = []
 neff_N6789_24_LL_DIODE = []
@@ -23,6 +25,8 @@ neff_N4789_20_LL_DIODE = df_N4789_20_LL_DIODE['Neff']
 neff_N4789_20_LL_DIODEQUARTER = df_N4789_20_LL_DIODEQUARTER['Neff']
 neff_N6789_24_LL_DIODE = df_N6789_24_LL_DIODE['Neff']
 neff_N6789_24_LL_DIODEQUARTER = df_N6789_24_LL_DIODEQUARTER['Neff']
+
+#%%
 
 fluence = 6.5*10**18
 
@@ -50,7 +54,9 @@ neff_N6789_24_LL_DIODEQUARTER_fit = Params_N6789_24_LL_DIODEQUARTER[0]*np.exp(-a
 
 figure(figsize=(10, 10), dpi=100)
 
-plt.scatter(71.92619261926193,9.11857E+18, label = 'CO138 Minimum at 71.93 min')
+plt.suptitle('HGCal Campaign Round 2.3', fontsize=20)
+plt.scatter(71.92619261926193,9.11857E+18, label = 'N4789_20_LL_DIODE Minimum at 71.93 min')
+plt.scatter(71.92619261926193,9.11857E+18, label = 'N4789_20_LL_DIODEQUARTER Minimum at 71.93 min')
 plt.scatter(annealing_N4789_20_LL_DIODE, neff_N4789_20_LL_DIODE, label = r'N4789_20_LL_DIODE $N_{eff}$ Data')
 plt.scatter(annealing_N4789_20_LL_DIODEQUARTER, neff_N4789_20_LL_DIODEQUARTER, label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Data')
 plt.plot(annealing_N4789_20_LL_DIODE_fit, neff_N4789_20_LL_DIODE_fit, label = r'N4789_20_LL_DIODE $N_{eff}$ Fit')
@@ -63,7 +69,9 @@ plt.legend(fontsize = 18)
 
 figure(figsize=(10, 10), dpi=100)
 
-plt.scatter(71.92619261926193,9.11857E+18, label = 'CO138 Minimum at 71.93 min')
+plt.suptitle('HGCal Campaign Round 2.2', fontsize=20)
+plt.scatter(71.92619261926193,9.11857E+18, label = 'N6789_24_LL_DIODE Minimum at 71.93 min')
+plt.scatter(71.92619261926193,9.11857E+18, label = 'N6789_24_LL_DIODEQUARTER Minimum at 71.93 min')
 plt.scatter(annealing_N6789_24_LL_DIODE, neff_N6789_24_LL_DIODE, label = r'N6789_24_LL_DIODE $N_{eff}$ Data')
 plt.scatter(annealing_N6789_24_LL_DIODEQUARTER, neff_N6789_24_LL_DIODEQUARTER, label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Data')
 plt.plot(annealing_N6789_24_LL_DIODE_fit, neff_N6789_24_LL_DIODE_fit, label = r'N6789_24_LL_DIODE $N_{eff}$ Fit')
@@ -86,7 +94,46 @@ for i in range(0,len(neff_N4789_20_LL_DIODE_fit)):
         
 print(Params_N4789_20_LL_DIODE)
 
+#%%
+print(min(neff_N4789_20_LL_DIODEQUARTER_fit))
 
+value = min(neff_N4789_20_LL_DIODEQUARTER_fit)
+
+for i in range(0,len(neff_N4789_20_LL_DIODEQUARTER_fit)):
+    if value == neff_N4789_20_LL_DIODEQUARTER_fit[i]:
+        print(i)
+        print(annealing_N4789_20_LL_DIODEQUARTER_fit[i])
+        print(neff_N4789_20_LL_DIODEQUARTER_fit[i])
+        
+print(Params_N4789_20_LL_DIODEQUARTER)
+
+#%%
+
+print(min(neff_N6789_24_LL_DIODE_fit))
+
+value = min(neff_N6789_24_LL_DIODE_fit)
+
+for i in range(0,len(neff_N6789_24_LL_DIODE_fit)):
+    if value == neff_N6789_24_LL_DIODE_fit[i]:
+        print(i)
+        print(annealing_N6789_24_LL_DIODE_fit[i])
+        print(neff_N6789_24_LL_DIODE_fit[i])
+        
+print(Params_N6789_24_LL_DIODE)
+
+#%%
+
+print(min(neff_N6789_24_LL_DIODEQUARTER_fit))
+
+value = min(neff_N6789_24_LL_DIODEQUARTER_fit)
+
+for i in range(0,len(neff_N6789_24_LL_DIODEQUARTER_fit)):
+    if value == neff_N6789_24_LL_DIODEQUARTER_fit[i]:
+        print(i)
+        print(annealing_N6789_24_LL_DIODEQUARTER_fit[i])
+        print(neff_N6789_24_LL_DIODEQUARTER_fit[i])
+        
+print(Params_N6789_24_LL_DIODEQUARTER)
 
 
 
