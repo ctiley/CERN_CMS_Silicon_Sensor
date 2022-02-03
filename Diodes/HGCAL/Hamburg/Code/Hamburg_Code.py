@@ -9,20 +9,20 @@ neff_N4789_20_LL_DIODEQUARTER = []
 neff_N6789_24_LL_DIODE = []
 neff_N6789_24_LL_DIODEQUARTER = []
 
-df_138 = pd.read_csv('CO138_Neff_vs_Annealing.csv')
-df_139 = pd.read_csv('CO139_Neff_vs_Annealing.csv')
-df_138 = pd.read_csv('CO138_Neff_vs_Annealing.csv')
-df_139 = pd.read_csv('CO139_Neff_vs_Annealing.csv')
+df_N4789_20_LL_DIODE = pd.read_csv('N4789_20_LL_DIODE.csv')
+df_N4789_20_LL_DIODEQUARTER = pd.read_csv('N4789_20_LL_DIODEQUARTER.csv')
+df_N6789_24_LL_DIODE = pd.read_csv('N6789_24_LL_DIODE.csv')
+df_N6789_24_LL_DIODEQUARTER = pd.read_csv('N6789_24_LL_DIODEQUARTER.csv')
 
-annealing_138 = df_138['Annealing at 60C (min)']
-annealing_139 = df_139['Annealing at 60C (min)']
-annealing_138 = df_138['Annealing at 60C (min)']
-annealing_139 = df_139['Annealing at 60C (min)']
+annealing_N4789_20_LL_DIODE = df_N4789_20_LL_DIODE['Annealing at 60C (min)']
+annealing_N4789_20_LL_DIODEQUARTER = df_N4789_20_LL_DIODEQUARTER['Annealing at 60C (min)']
+annealing_N6789_24_LL_DIODE = df_N6789_24_LL_DIODE['Annealing at 60C (min)']
+annealing_N6789_24_LL_DIODEQUARTER = df_N6789_24_LL_DIODEQUARTER['Annealing at 60C (min)']
 
-neff_138 = df_138['Neff']
-neff_139 = df_139['Neff']
-neff_138 = df_138['Neff']
-neff_139 = df_139['Neff']
+neff_N4789_20_LL_DIODE = df_N4789_20_LL_DIODE['Neff']
+neff_N4789_20_LL_DIODEQUARTER = df_N4789_20_LL_DIODEQUARTER['Neff']
+neff_N6789_24_LL_DIODE = df_N6789_24_LL_DIODE['Neff']
+neff_N6789_24_LL_DIODEQUARTER = df_N6789_24_LL_DIODEQUARTER['Neff']
 
 fluence = 6.5*10**18
 
@@ -31,15 +31,20 @@ guess = np.array([.9646, -3.5*10**18, 1.4, 63, 90])
 def Hamburg(x, ga, NC, gy, ta, ty):
     return ga*np.exp(-x/ta)*fluence + gy*(1.-1./(1.+x/ty))*fluence + NC
 
-annealing_138_fit = np.linspace(annealing_138[0], annealing_138[18], 1000)
-annealing_139_fit = np.linspace(annealing_139[0], annealing_139[4], 1000)
+annealing_N4789_20_LL_DIODE_fit = np.linspace(annealing_N4789_20_LL_DIODE[0], annealing_N4789_20_LL_DIODE[18], 1000)
+annealing_N4789_20_LL_DIODEQUARTER_fit = np.linspace(annealing_N4789_20_LL_DIODEQUARTER[0], annealing_N4789_20_LL_DIODEQUARTER[4], 1000)
+annealing_N6789_24_LL_DIODE_fit = np.linspace(annealing_N6789_24_LL_DIODE[0], annealing_N6789_24_LL_DIODE[18], 1000)
+annealing_N6789_24_LL_DIODEQUARTER_fit = np.linspace(annealing_N6789_24_LL_DIODEQUARTER[0], annealing_N6789_24_LL_DIODEQUARTER[4], 1000)
 
-Params_138, Covariances_138 = curve_fit(Hamburg, annealing_138, neff_138, guess)
-#Params_139, Covariances_139 = curve_fit(Hamburg, annealing_139, neff_139, guess)
+Params_N4789_20_LL_DIODE, Covariances_N4789_20_LL_DIODE = curve_fit(Hamburg, annealing_N4789_20_LL_DIODE, neff_N4789_20_LL_DIODE, guess)
+#Params_N4789_20_LL_DIODEQUARTER, Covariances_N4789_20_LL_DIODEQUARTER = curve_fit(Hamburg, annealing_N4789_20_LL_DIODEQUARTER, neff_N4789_20_LL_DIODEQUARTER, guess)
+#Params_N6789_24_LL_DIODE, Covariances_N6789_24_LL_DIODE = curve_fit(Hamburg, annealing_N6789_24_LL_DIODE, neff_N6789_24_LL_DIODE, guess)
+#Params_N6789_24_LL_DIODEQUARTER, Covariances_N6789_24_LL_DIODEQUARTER = curve_fit(Hamburg, annealing_N6789_24_LL_DIODEQUARTER, neff_N6789_24_LL_DIODEQUARTER, guess)
 
-neff_138_fit = Params_138[0]*np.exp(-annealing_138_fit/Params_138[3])*fluence + Params_138[2]*(1.-1./(1.+annealing_138_fit/Params_138[4]))*fluence + Params_138[1]
-#neff_139_fit = Params_139[0]*np.exp(-annealing_139_fit/Params_139[3])*fluence + Params_139[2]*(1.-1./(1.+annealing_139_fit/Params_139[4]))*fluence + Params_139[1]
-
+neff_N4789_20_LL_DIODE_fit = Params_N4789_20_LL_DIODE[0]*np.exp(-annealing_N4789_20_LL_DIODE_fit/Params_N4789_20_LL_DIODE[3])*fluence + Params_N4789_20_LL_DIODE[2]*(1.-1./(1.+annealing_N4789_20_LL_DIODE_fit/Params_N4789_20_LL_DIODE[4]))*fluence + Params_N4789_20_LL_DIODE[1]
+#neff_N4789_20_LL_DIODEQUARTER_fit = Params_N4789_20_LL_DIODEQUARTER[0]*np.exp(-annealing_N4789_20_LL_DIODEQUARTER_fit/Params_N4789_20_LL_DIODEQUARTER[3])*fluence + Params_N4789_20_LL_DIODEQUARTER[2]*(1.-1./(1.+annealing_N4789_20_LL_DIODEQUARTER_fit/Params_N4789_20_LL_DIODEQUARTER[4]))*fluence + Params_N4789_20_LL_DIODEQUARTER[1]
+#neff_N6789_24_LL_DIODE_fit = Params_N6789_24_LL_DIODE[0]*np.exp(-annealing_N6789_24_LL_DIODE_fit/Params_N6789_24_LL_DIODE[3])*fluence + Params_N6789_24_LL_DIODE[2]*(1.-1./(1.+annealing_N6789_24_LL_DIODE_fit/Params_N6789_24_LL_DIODE[4]))*fluence + Params_N6789_24_LL_DIODE[1]
+#neff_N6789_24_LL_DIODEQUARTER_fit = Params_N6789_24_LL_DIODEQUARTER[0]*np.exp(-annealing_N6789_24_LL_DIODEQUARTER_fit/Params_N6789_24_LL_DIODEQUARTER[3])*fluence + Params_N6789_24_LL_DIODEQUARTER[2]*(1.-1./(1.+annealing_N6789_24_LL_DIODEQUARTER_fit/Params_N6789_24_LL_DIODEQUARTER[4]))*fluence + Params_N6789_24_LL_DIODEQUARTER[1]
 
 figure(figsize=(10, 10), dpi=100)
 
@@ -52,17 +57,34 @@ plt.xlabel('Annealing (min)', fontsize=22)
 plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
 plt.legend(fontsize = 18)
 
-"""
-print(min(neff_138_fit))
+#%%
+print(min(neff_N4789_20_LL_DIODE_fit))
 
-value = min(neff_138_fit)
+value = min(neff_N4789_20_LL_DIODE_fit)
 
-for i in range(0,len(neff_138_fit)):
-    if value == neff_138_fit[i]:
+for i in range(0,len(neff_N4789_20_LL_DIODE_fit)):
+    if value == neff_N4789_20_LL_DIODE_fit[i]:
         print(i)
-        print(annealing_138_fit[i])
-        print(neff_138_fit[i])
+        print(annealing_N4789_20_LL_DIODE_fit[i])
+        print(neff_N4789_20_LL_DIODE_fit[i])
         
-print(Params_138)
-print(Params_139)
-"""
+print(Params_N4789_20_LL_DIODE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
