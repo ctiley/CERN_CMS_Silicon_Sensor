@@ -34,6 +34,7 @@ len_N6789_24_LL_DIODEQUARTER = len(df_N6789_24_LL_DIODEQUARTER) - 1
 
 fluence = 6.5*10**18
 
+guess = np.array([4.24760344e+00, 1.68132117e+19, 4.97930995e+03, 1.00022578e+01, 4.81995338e+05])
 guess = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
@@ -73,8 +74,8 @@ plt.scatter(annealing_N4789_20_LL_DIODE, neff_N4789_20_LL_DIODE, label = r'N4789
 plt.scatter(annealing_N4789_20_LL_DIODEQUARTER, neff_N4789_20_LL_DIODEQUARTER, label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Data')
 plt.plot(annealing_N4789_20_LL_DIODE_fit, neff_N4789_20_LL_DIODE_fit, label = r'N4789_20_LL_DIODE $N_{eff}$ Fit')
 plt.plot(annealing_N4789_20_LL_DIODEQUARTER_fit, neff_N4789_20_LL_DIODEQUARTER_fit, label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Fit')
-plt.scatter(40.0,1.8044427255664265e+19, label = 'N4789_20_LL_DIODE Minimum at 40.0 min')
-plt.scatter(37.35735735735736,1.98937917552304e+19, label = 'N4789_20_LL_DIODEQUARTER Minimum at 37.7 min')
+plt.scatter(39.81981981981982,1.8046895390158275e+19, label = 'N4789_20_LL_DIODE Minimum at 39.82 min')
+plt.scatter(37.11711711711712,1.9980683153865482e+19, label = 'N4789_20_LL_DIODEQUARTER Minimum at 37.117 min')
 plt.xlabel('Annealing (min)', fontsize=22)
 plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
 plt.legend(fontsize = 14)
@@ -88,8 +89,8 @@ plt.scatter(annealing_N6789_24_LL_DIODE, neff_N6789_24_LL_DIODE, label = r'N6789
 plt.scatter(annealing_N6789_24_LL_DIODEQUARTER, neff_N6789_24_LL_DIODEQUARTER, label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Data')
 plt.plot(annealing_N6789_24_LL_DIODE_fit, neff_N6789_24_LL_DIODE_fit, label = r'N6789_24_LL_DIODE $N_{eff}$ Fit')
 plt.plot(annealing_N6789_24_LL_DIODEQUARTER_fit, neff_N6789_24_LL_DIODEQUARTER_fit, label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Fit')
-plt.scatter(1.7117117117117115,2.112228465264933e+19, label = 'N6789_24_LL_DIODE Minimum at 2.3 min')
-plt.scatter(15.135135135135135,2.363144760566662e+19, label = 'N6789_24_LL_DIODEQUARTER Minimum at 16.9 min')
+plt.scatter(1.3213213213213213,2.175787460576332e+19, label = 'N6789_24_LL_DIODE Minimum at 1.3 min')
+plt.scatter(15.015015015015015,2.3640992631144546e+19, label = 'N6789_24_LL_DIODEQUARTER Minimum at 15.01 min')
 
 plt.xlabel('Annealing (min)', fontsize=22)
 plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
