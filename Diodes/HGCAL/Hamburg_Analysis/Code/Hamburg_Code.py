@@ -1,12 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-import pandas as pd
 from matplotlib.pyplot import figure
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
+import os
 
-
+# Current Working Directory
+cwd = os.getcwd()
 
 
 #%%
