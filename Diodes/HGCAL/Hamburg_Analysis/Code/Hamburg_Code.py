@@ -5,6 +5,13 @@ import pandas as pd
 from matplotlib.pyplot import figure
 
 
+
+
+
+
+#%%
+
+
 neff_N4789_20_LL_DIODE = []
 neff_N4789_20_LL_DIODEQUARTER = []
 neff_N6789_24_LL_DIODE = []
