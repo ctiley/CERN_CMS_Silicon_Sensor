@@ -1,5 +1,6 @@
 from scipy.optimize import curve_fit
 from matplotlib.pyplot import figure
+from math import log10, floor
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,167 +8,168 @@ import numpy as np
 
 import os
 
+# Find Minimum of Graph
+def find_minimum(neff_fit_dict, annealing_fit_dict, diode_name):
+    
+    min_neff = min(neff_fit_dict[diode_name])
+
+    for i in range(0,len(neff_fit_dict[diode_name])):
+        
+        if min_neff == neff_fit_dict[diode_name][i]:
+            
+            min_anneal_time = annealing_fit_dict[diode_name][i]
+            
+    
+    return min_neff, min_anneal_time
+
+# Is NaN Function
+def isNaN(num):
+    return num != num
+
+# Significant Figures Function
+def round_sig(x, sig=3, small_value=1.0e-9):
+    if isNaN(x) == True:
+        return x
+    else:
+        return round(x, sig - int(floor(log10(max(abs(x), abs(small_value))))) - 1)
+
 # Current Working Directory
 cwd = os.getcwd()
 
+# List all of the Files in the Current Working Directory 
+search_path = '.'   # set your path here.
+root, dirs, files = next(os.walk(search_path), ([],[],[]))
+files.pop(0)
+file_size = len(files)
 
-#%%
+# Name the Different Dictionaries That Will Contain the Relevent Information for the Analysis
+neff_dict = {}
+df_dict = {}
+annealing_dict = {}
+len_dict = {}
+annealing_fit_dict = {}
+neff_fit_dict = {}
+params_dict = {}
+covariance_dict = {}
 
-
-neff_N4789_20_LL_DIODE = []
-neff_N4789_20_LL_DIODEQUARTER = []
-neff_N6789_24_LL_DIODE = []
-neff_N6789_24_LL_DIODEQUARTER = []
-
-df_N4789_20_LL_DIODE = pd.read_csv('N4789_20_LL_DIODE.csv')
-df_N4789_20_LL_DIODEQUARTER = pd.read_csv('N4789_20_LL_DIODEQUARTER.csv')
-df_N6789_24_LL_DIODE = pd.read_csv('N6789_24_LL_DIODE.csv')
-df_N6789_24_LL_DIODEQUARTER = pd.read_csv('N6789_24_LL_DIODEQUARTER.csv')
-
-annealing_N4789_20_LL_DIODE = df_N4789_20_LL_DIODE['Annealing at 60C (min)']
-annealing_N4789_20_LL_DIODEQUARTER = df_N4789_20_LL_DIODEQUARTER['Annealing at 60C (min)']
-annealing_N6789_24_LL_DIODE = df_N6789_24_LL_DIODE['Annealing at 60C (min)']
-annealing_N6789_24_LL_DIODEQUARTER = df_N6789_24_LL_DIODEQUARTER['Annealing at 60C (min)']
-
-neff_N4789_20_LL_DIODE = df_N4789_20_LL_DIODE['Neff']
-neff_N4789_20_LL_DIODEQUARTER = df_N4789_20_LL_DIODEQUARTER['Neff']
-neff_N6789_24_LL_DIODE = df_N6789_24_LL_DIODE['Neff']
-neff_N6789_24_LL_DIODEQUARTER = df_N6789_24_LL_DIODEQUARTER['Neff']
-
-len_N4789_20_LL_DIODE = len(df_N4789_20_LL_DIODE) - 1
-len_N4789_20_LL_DIODEQUARTER = len(df_N4789_20_LL_DIODEQUARTER) - 1
-len_N6789_24_LL_DIODE = len(df_N6789_24_LL_DIODE)- 1 
-len_N6789_24_LL_DIODEQUARTER = len(df_N6789_24_LL_DIODEQUARTER) - 1
-
-#%%
-
+# Fitting Items
 fluence = 6.5*10**18
 
-guess = np.array([4.24760344e+00, 1.68132117e+19, 4.97930995e+03, 1.00022578e+01, 4.81995338e+05])
 guess = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01])
+guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 80])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
     return ga*np.exp(-x/ta)*fluence + gy*(1.-1./(1.+x/ty))*fluence + NC
 
-annealing_N4789_20_LL_DIODE_fit = np.linspace(annealing_N4789_20_LL_DIODE[0], annealing_N4789_20_LL_DIODE[len_N4789_20_LL_DIODE], 1000)
-annealing_N4789_20_LL_DIODEQUARTER_fit = np.linspace(annealing_N4789_20_LL_DIODEQUARTER[0], annealing_N4789_20_LL_DIODEQUARTER[len_N4789_20_LL_DIODEQUARTER], 1000)
-annealing_N6789_24_LL_DIODE_fit = np.linspace(annealing_N6789_24_LL_DIODE[0], annealing_N6789_24_LL_DIODE[len_N6789_24_LL_DIODE], 1000)
-annealing_N6789_24_LL_DIODEQUARTER_fit = np.linspace(annealing_N6789_24_LL_DIODEQUARTER[0], annealing_N6789_24_LL_DIODEQUARTER[len_N6789_24_LL_DIODEQUARTER], 1000)
+def Hamburg_shift(x, ga, NC, gy, ta, ty, t_s):
+    return ga*np.exp(-(x - t_s)/ta)*fluence + gy*(1.-1./(1.+(x - t_s)/ty))*fluence + NC
 
-Params_N4789_20_LL_DIODE, Covariances_N4789_20_LL_DIODE = curve_fit(Hamburg, annealing_N4789_20_LL_DIODE, neff_N4789_20_LL_DIODE, guess)
-Params_N4789_20_LL_DIODEQUARTER, Covariances_N4789_20_LL_DIODEQUARTER = curve_fit(Hamburg, annealing_N4789_20_LL_DIODEQUARTER, neff_N4789_20_LL_DIODEQUARTER, guess)
-Params_N6789_24_LL_DIODE, Covariances_N6789_24_LL_DIODE = curve_fit(Hamburg, annealing_N6789_24_LL_DIODE, neff_N6789_24_LL_DIODE, guess)
-Params_N6789_24_LL_DIODEQUARTER, Covariances_N6789_24_LL_DIODEQUARTER = curve_fit(Hamburg, annealing_N6789_24_LL_DIODEQUARTER, neff_N6789_24_LL_DIODEQUARTER, guess)
+# Populate the Dictionaries and Fit the Curves
+for i in range(0, file_size):
 
-neff_N4789_20_LL_DIODE_fit = (Params_N4789_20_LL_DIODE[0]*np.exp(-annealing_N4789_20_LL_DIODE_fit/Params_N4789_20_LL_DIODE[3])*fluence + 
-                                     Params_N4789_20_LL_DIODE[2]*(1.-1./(1.+annealing_N4789_20_LL_DIODE_fit/Params_N4789_20_LL_DIODE[4]))*fluence + Params_N4789_20_LL_DIODE[1])
-
-neff_N4789_20_LL_DIODEQUARTER_fit = (Params_N4789_20_LL_DIODEQUARTER[0]*np.exp(-annealing_N4789_20_LL_DIODEQUARTER_fit/Params_N4789_20_LL_DIODEQUARTER[3])*fluence + 
-                                     Params_N4789_20_LL_DIODEQUARTER[2]*(1.-1./(1.+annealing_N4789_20_LL_DIODEQUARTER_fit/Params_N4789_20_LL_DIODEQUARTER[4]))*fluence + 
-                                     Params_N4789_20_LL_DIODEQUARTER[1])
-
-neff_N6789_24_LL_DIODE_fit = (Params_N6789_24_LL_DIODE[0]*np.exp(-annealing_N6789_24_LL_DIODE_fit/Params_N6789_24_LL_DIODE[3])*fluence + 
-                              Params_N6789_24_LL_DIODE[2]*(1.-1./(1.+annealing_N6789_24_LL_DIODE_fit/Params_N6789_24_LL_DIODE[4]))*fluence + Params_N6789_24_LL_DIODE[1])
-
-neff_N6789_24_LL_DIODEQUARTER_fit = (Params_N6789_24_LL_DIODEQUARTER[0]*np.exp(-annealing_N6789_24_LL_DIODEQUARTER_fit/Params_N6789_24_LL_DIODEQUARTER[3])*fluence + 
-                                     Params_N6789_24_LL_DIODEQUARTER[2]*(1.-1./(1.+annealing_N6789_24_LL_DIODEQUARTER_fit/Params_N6789_24_LL_DIODEQUARTER[4]))*fluence + 
-                                     Params_N6789_24_LL_DIODEQUARTER[1])
+    diode_name = files[i].strip('.csv')
+    df_dict[diode_name] = pd.read_csv(files[i])
+    annealing_dict[diode_name] = df_dict[diode_name]['Annealing at 60C (min)']
+    neff_dict[diode_name] = df_dict[diode_name]['Neff']
+    len_dict[diode_name] = len(df_dict[diode_name]) - 1
+    annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
+    
+    # Fitting for HGCAL Diodes W/O Much Shifting in Time
+    params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name], guess)
+    neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
+    
+    # Fitting for HGCAL Diodes W/ a lot of Shift in Time
+    #params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
+    #neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
 
 
 #%%
+# HGCAL Campaign Round 2.2 Front
 
-figure(figsize=(10, 6), dpi=100)
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N6789_24_LL_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N6789_24_LL_DIODEQUARTER')
 
-plt.suptitle('HGCal Campaign Round 2.3', fontsize=20)
-plt.scatter(annealing_N4789_20_LL_DIODE, neff_N4789_20_LL_DIODE, label = r'N4789_20_LL_DIODE $N_{eff}$ Data')
-plt.scatter(annealing_N4789_20_LL_DIODEQUARTER, neff_N4789_20_LL_DIODEQUARTER, label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Data')
-plt.plot(annealing_N4789_20_LL_DIODE_fit, neff_N4789_20_LL_DIODE_fit, label = r'N4789_20_LL_DIODE $N_{eff}$ Fit')
-plt.plot(annealing_N4789_20_LL_DIODEQUARTER_fit, neff_N4789_20_LL_DIODEQUARTER_fit, label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Fit')
-plt.scatter(39.81981981981982,1.8046895390158275e+19, label = 'N4789_20_LL_DIODE Minimum at 39.82 min')
-plt.scatter(37.11711711711712,1.9980683153865482e+19, label = 'N4789_20_LL_DIODEQUARTER Minimum at 37.117 min')
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.2 Front', fontsize=20)
+plt.scatter(annealing_dict['N6789_24_LL_DIODE'], neff_dict['N6789_24_LL_DIODE'], label = r'N6789_24_LL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N6789_24_LL_DIODEQUARTER'], neff_dict['N6789_24_LL_DIODEQUARTER'], label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Data')
+plt.plot(annealing_fit_dict['N6789_24_LL_DIODE'], neff_fit_dict['N6789_24_LL_DIODE'])
+plt.plot(annealing_fit_dict['N6789_24_LL_DIODEQUARTER'], neff_fit_dict['N6789_24_LL_DIODEQUARTER'])
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N6789_24_LL_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N6789_24_LL_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
 plt.xlabel('Annealing (min)', fontsize=22)
 plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
 plt.legend(fontsize = 14)
 
 #%%
+# HGCAL Campaign Round 2.2 Back
 
-figure(figsize=(10, 10), dpi=100)
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LL_DIODE')
+min_neff_DIODEHALF, min_anneal_time_DIODEHALF =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LL_DIODEHALF')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LL_DIODEQUARTER')
 
-plt.suptitle('HGCal Campaign Round 2.2', fontsize=20)
-plt.scatter(annealing_N6789_24_LL_DIODE, neff_N6789_24_LL_DIODE, label = r'N6789_24_LL_DIODE $N_{eff}$ Data')
-plt.scatter(annealing_N6789_24_LL_DIODEQUARTER, neff_N6789_24_LL_DIODEQUARTER, label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Data')
-plt.plot(annealing_N6789_24_LL_DIODE_fit, neff_N6789_24_LL_DIODE_fit, label = r'N6789_24_LL_DIODE $N_{eff}$ Fit')
-plt.plot(annealing_N6789_24_LL_DIODEQUARTER_fit, neff_N6789_24_LL_DIODEQUARTER_fit, label = r'N6789_24_LL_DIODEQUARTER $N_{eff}$ Fit')
-plt.scatter(1.3213213213213213,2.175787460576332e+19, label = 'N6789_24_LL_DIODE Minimum at 1.3 min')
-plt.scatter(15.015015015015015,2.3640992631144546e+19, label = 'N6789_24_LL_DIODEQUARTER Minimum at 15.01 min')
-
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.2 Back', fontsize=20)
+plt.scatter(annealing_dict['N4789_24_LL_DIODE'], neff_dict['N4789_24_LL_DIODE'], label = r'N4789_24_LL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_LL_DIODEHALF'], neff_dict['N4789_24_LL_DIODEHALF'], label = r'N4789_24_LL_DIODEHALF $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_LL_DIODEQUARTER'], neff_dict['N4789_24_LL_DIODEQUARTER'], label = r'N4789_24_LL_DIODEQUARTER $N_{eff}$ Data')
+plt.plot(annealing_fit_dict['N4789_24_LL_DIODE'], neff_fit_dict['N4789_24_LL_DIODE'])
+plt.plot(annealing_fit_dict['N4789_24_LL_DIODEHALF'], neff_fit_dict['N4789_24_LL_DIODEHALF'])
+plt.plot(annealing_fit_dict['N4789_24_LL_DIODEQUARTER'], neff_fit_dict['N4789_24_LL_DIODEQUARTER'])
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_24_LL_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEHALF, min_neff_DIODEHALF, label = 'N4789_24_LL_DIODEHALF Minimum at ' + str(round_sig(min_anneal_time_DIODEHALF)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_24_LL_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
 plt.xlabel('Annealing (min)', fontsize=22)
 plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
 plt.legend(fontsize = 14)
 
+#%%
+# HGCAL Campaign Round 2.3 Front
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UR_DIODE')
+min_neff_DIODEHALF, min_anneal_time_DIODEHALF =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UR_DIODEHALF')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UR_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.3 Front', fontsize=20)
+plt.scatter(annealing_dict['N4789_24_UR_DIODE'], neff_dict['N4789_24_UR_DIODE'], label = r'N4789_24_UR_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_UR_DIODEHALF'], neff_dict['N4789_24_UR_DIODEHALF'], label = r'N4789_24_UR_DIODEHALF $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_UR_DIODEQUARTER'], neff_dict['N4789_24_UR_DIODEQUARTER'], label = r'N4789_24_UR_DIODEQUARTER $N_{eff}$ Data')
+#plt.plot(annealing_fit_dict['N4789_24_UR_DIODE'], neff_fit_dict['N4789_24_UR_DIODE'])
+#plt.plot(annealing_fit_dict['N4789_24_UR_DIODEHALF'], neff_fit_dict['N4789_24_UR_DIODEHALF'])
+#plt.plot(annealing_fit_dict['N4789_24_UR_DIODEQUARTER'], neff_fit_dict['N4789_24_UR_DIODEQUARTER'])
+#plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_24_UR_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+#plt.scatter(min_anneal_time_DIODEHALF, min_neff_DIODEHALF, label = 'N4789_24_UR_DIODEHALF Minimum at ' + str(round_sig(min_anneal_time_DIODEHALF)) + ' min')
+#plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_24_UR_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+plt.legend(fontsize = 14)
 
 #%%
-print(min(neff_N4789_20_LL_DIODE_fit))
+# HGCAL Campaign Round 2.3
 
-value = min(neff_N4789_20_LL_DIODE_fit)
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_20_LL_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_20_LL_DIODEQUARTER')
 
-for i in range(0,len(neff_N4789_20_LL_DIODE_fit)):
-    if value == neff_N4789_20_LL_DIODE_fit[i]:
-        print(i)
-        print(annealing_N4789_20_LL_DIODE_fit[i])
-        print(neff_N4789_20_LL_DIODE_fit[i])
-        
-print(Params_N4789_20_LL_DIODE)
-
-#%%
-print(min(neff_N4789_20_LL_DIODEQUARTER_fit))
-
-value = min(neff_N4789_20_LL_DIODEQUARTER_fit)
-
-for i in range(0,len(neff_N4789_20_LL_DIODEQUARTER_fit)):
-    if value == neff_N4789_20_LL_DIODEQUARTER_fit[i]:
-        print(i)
-        print(annealing_N4789_20_LL_DIODEQUARTER_fit[i])
-        print(neff_N4789_20_LL_DIODEQUARTER_fit[i])
-        
-print(Params_N4789_20_LL_DIODEQUARTER)
-
-#%%
-
-print(min(neff_N6789_24_LL_DIODE_fit))
-
-value = min(neff_N6789_24_LL_DIODE_fit)
-
-for i in range(0,len(neff_N6789_24_LL_DIODE_fit)):
-    if value == neff_N6789_24_LL_DIODE_fit[i]:
-        print(i)
-        print(annealing_N6789_24_LL_DIODE_fit[i])
-        print(neff_N6789_24_LL_DIODE_fit[i])
-        
-print(Params_N6789_24_LL_DIODE)
-
-#%%
-
-print(min(neff_N6789_24_LL_DIODEQUARTER_fit))
-
-value = min(neff_N6789_24_LL_DIODEQUARTER_fit)
-
-for i in range(0,len(neff_N6789_24_LL_DIODEQUARTER_fit)):
-    if value == neff_N6789_24_LL_DIODEQUARTER_fit[i]:
-        print(i)
-        print(annealing_N6789_24_LL_DIODEQUARTER_fit[i])
-        print(neff_N6789_24_LL_DIODEQUARTER_fit[i])
-        
-print(Params_N6789_24_LL_DIODEQUARTER)
-
-
-
-
-
-
-
-
-
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.3 Back', fontsize=20)
+plt.scatter(annealing_dict['N4789_20_LL_DIODE'], neff_dict['N4789_20_LL_DIODE'], label = r'N4789_20_LL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_20_LL_DIODEQUARTER'], neff_dict['N4789_20_LL_DIODEQUARTER'], label = r'N4789_20_LL_DIODEQUARTER $N_{eff}$ Data')
+plt.plot(annealing_fit_dict['N4789_20_LL_DIODE'], neff_fit_dict['N4789_20_LL_DIODE'])
+plt.plot(annealing_fit_dict['N4789_20_LL_DIODEQUARTER'], neff_fit_dict['N4789_20_LL_DIODEQUARTER'])
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_20_LL_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_20_LL_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+plt.legend(fontsize = 14)
 
 
 

@@ -8,11 +8,19 @@ from forge.utilities import line_intersection
 from statistics import mean
 from statistics import stdev
 
+# Current Working Directory
+cwd = os.getcwd()
+
 def list_files(dir):
+    
    files = []
+   
    for obj in os.listdir(dir):
+       
       if os.path.isfile(obj):
+          
          files.append(obj)
+         
    return files
 
 def Vuong(bv, cv):
@@ -20,69 +28,61 @@ def Vuong(bv, cv):
         print ("Vuong Code")
 
         # Calculate the slopes from the right and the left
-        LR2 = 0  # r^2 values for both sides
+        LR2 = 0  
         RR2 = 0
-        lpp = 9999
-        rpp = 9999
         Right_stats = 0
         Left_stats = 0
 
         polarity = abs(bv[0])/bv[0]
-        Vmin = bv[0] * polarity  # Polarity is set to positive to be compatible with CVIVanalyze
-        Vmax = bv[len(bv)-1] * polarity
         step = bv[len(bv)-1] - bv[len(bv)-2]
-        print ("Voltages", Vmin, Vmax, polarity)
-        print (bv,cv)
+
 
         for k in bv, cv:
-            print ("yo", k)
+
             delta = [cv[i + 1] - cv[i] for i in range(len(cv) - 1)]
             Range = [bv[i + 1] - bv[i] for i in range(len(bv) - 1)]
             Normalization = max(cv) - min(cv)
             RangeNorm = [i * Normalization for i in Range]
-            #RangeNorm = [i * (cv[len(cv) - 1]) for i in Range]
             delta3 = [cv[i + 3] - cv[i] for i in range(len(cv) - 3)]
             Range3 = [bv[i + 3] - bv[i] for i in range(len(bv) - 3)]
             bv3 = [bv[i + 3] for i in range(len(bv) - 3)]
             RangeNorm3 = [i * Normalization for i in Range3]
-            #slope, intercept, r, p_value, std_err = [linregress(bv[i:i+3],cv[i:i+3]) for i in range(len(cv) - 3)]
-            #print ("R2", r)
 
             m = [x / y for x, y in zip(delta, RangeNorm)]  # m is define as normalized SLOPE
             m3 = [x / y for x, y in zip(delta3, RangeNorm3)]  # m is define as normalized SLOPE
-            print("Delta", Normalization, delta3, Range3, RangeNorm3, m3)
 
             #mMag = map(abs, m)  # converting all data to positive to set the depletion range
             mMag = list(map(lambda x: abs(x), m))  # converting all data to positive to set the depletion range
             mMag.insert(0, mMag[0])  # making all arrays the same length
             mMag3 = list(map(lambda x: abs(x), m3))  # converting all data to positive to set the depletion range
+            
             for i in range(3): mMag3.insert(0, mMag3[0])  # making all arrays the same length
-            print("mMag", mMag3)
 
-            #if bv[1] < 1:
-            #    Deplete = [i for i, j in zip(bv, mMag) if ((j < 0.0005) and (i < -100.0))]  # range of mimimum change
-            #else:
-            #    Deplete = [i for i, j in zip(bv, mMag) if ((j < 0.0005) and (i > 100.0))]  # range of mimimum change
-            #Deplete = [i for i, j in zip(bv, mMag) if ((j < 0.0005) and (i > 100.0))]  # range of mimimum change
             Deplete = []
             i = len(bv) - 1
             Depleted = False
             startDepletion = False
-            print ("yo momma", not Depleted, i, bv[i], mMag[i])
+            
             while not Depleted:
-                print ("Depletion", i, bv[i], mMag[i])
+                
                 if (mMag3[i] < 0.001):
+                    
                     Deplete.append(bv[i])
+                    
                     if not startDepletion:
-                        print("Start Depletion", i, bv[i], mMag[i])
+                        
                         startDepletion = True
+                        
                 elif startDepletion:
+                    
                     Depleted = True
+                    
                 i-= 1
+                
             Deplete.reverse()
 
-            print ("Depletion Voltages Array", len(Deplete), Deplete)
             if len(Deplete) == 0:  # Creating an artificial depleteion array with last couple of values
+            
                 Deplete.append(bv[-4])
                 Deplete.append(bv[-3])
                 Deplete.append(bv[-2])
@@ -90,12 +90,15 @@ def Vuong(bv, cv):
                 print("******************************************************************")
                 print("************************* NO DEPLETION ***************************")
                 print("******************************************************************")
+                
             else:
+                
                 print("******************************************************************")
                 print("*********************** Depletion Exist *************************")
                 print("******************************************************************")
 
             if (bv[10] > 0):  # calculating the absolutine minimum point and neighbor points
+            
                 print("yo4", zip(bv,m3))
                 mfilter = [j for i, j in zip(bv3, m3) if (i > 100.0)] # array to find the extrema far from start point
                 PosBias = max(mfilter)  # to find the range before depletion in the normalized derivatice
@@ -109,15 +112,20 @@ def Vuong(bv, cv):
                         Rampup.append(float(bv3[i - 3]))
                         Rampup.append(float(bv3[i - 5]))
                 print("Ramp", Rampup)
+                
             else:
+                
                 print("yo5")
                 mfilter = [j for i, j in zip(bv3, m3) if (i < -100.0)]  # array to find the extrema far from start point
                 NegBias = min(mfilter)
                 print("mfilter", mfilter, NegBias, len(m))
                 print("m3", m3)
                 Rampup = []
+                
                 for i in range(len(m3)):
+                    
                     if m3[i] == NegBias:
+                        
                         Rampup.append(float(bv3[i]))
                         Rampup.append(float(bv3[i - 3]))
                         Rampup.append(float(bv3[i - 5]))
@@ -126,22 +134,13 @@ def Vuong(bv, cv):
         slopef1max = Rampup[0] * polarity  # manually put in voltage values here!
         flatf1min = Deplete[0] * polarity
         print("yo7", Deplete[0])
-        # flatf1min = -960.0
-
-        #if Deplete[0] > 0:  # setting the range of depletion, and
-        #    if ((Deplete[0] + 150.0) <= bv[len(bv)-1]):  # making sure it doesn't surpass the
-        #        flatf1max = (Deplete[int(150/step)]) * polarity  # maximum bias voltage
-        #    else:
-        #        flatf1max = Deplete[len(Deplete)-1] * polarity
-        #else:
-        #    if ((Deplete[0] - 150.0) >= bv[len(bv)-1]):
-        #        flatf1max = (Deplete[int(150/step)]) * polarity
-        #    else:
-        #        flatf1max = Deplete[len(Deplete)-1] * polarity
 
         if ((Deplete[0] + 300.0) <= bv[len(bv) - 1]):  # making sure it doesn't surpass the
+        
             flatf1max = (Deplete[int(300 / step)])  # maximum bias voltage
+            
         else:
+            
             flatf1max = Deplete[len(Deplete) - 1]
 
         print("yo8", polarity, bv)
@@ -171,8 +170,7 @@ def Vuong(bv, cv):
             (bv[RstartIdx], slope_right * bv[RstartIdx] + intercept_right),
             (bv[RendIdx], slope_right * bv[RendIdx] + intercept_right)
         )
-        #LeftEndPoints = ((0,0),(1,1))
-        #RightEndPoints = ((2,2),(3,3))
+
         print ("End Points", LeftEndPoints, RightEndPoints)
         Left_stats = (LeftEndPoints, slope_left, intercept_left, r_left, lp_value, std_err_left)
         Right_stats = (RightEndPoints, slope_right, intercept_right, r_right, rp_value, std_err_right)
@@ -181,7 +179,6 @@ def Vuong(bv, cv):
         full_depletion_voltage = line_intersection(Left_stats[0], Right_stats[0])
         print("Full Depletion Voltage: ", full_depletion_voltage)
         return full_depletion_voltage
-
 
 filelist = list_files(".")
 
@@ -198,15 +195,23 @@ curr_idx = []
 for cviv in ["IV","CV"]:
 
     for cvivDataFile in filelist:
+        
         if ".txt" in cvivDataFile and cviv in cvivDataFile:
+            
             print ("Analyzing: ", cvivDataFile)
             nameForSave = cvivDataFile.strip('.txt')
             sensor = nameForSave.split("_")[1] + "_" + nameForSave.split("_")[2] + "_" + nameForSave.split("_")[3] + "_" + nameForSave.split("_")[4] + "_" + nameForSave.split("_")[5]
             diode = sensor + "_" + nameForSave.split("_")[6]
+            
             if "GR" in nameForSave.split("_")[7]: diode = diode + "_" + nameForSave.split("_")[7]
+            
+            if "IRRADSENSOR" and 'min' in nameForSave.split("_")[7]: diode = diode + "_" + nameForSave.split("_")[7]
+            
             files.append(nameForSave)
             sensors.append(sensor)
+            
             if diode not in diodes:
+            
                 diodes.append(diode)
 
             with open(cvivDataFile, "r") as df:
@@ -230,23 +235,27 @@ for cviv in ["IV","CV"]:
                 headers = txtLines[idx].split('\t')
 
                 if "CV" in cvivDataFile:
+                    
                     if "LCR_Cp_freq1" in headers:
+                        
                         cv1kHz_idx = headers.index("LCR_Cp_freq1")
+                        
                     elif "LCR_Cp_freq1000.0" in headers:
+                        
                         cv1kHz_idx = headers.index("LCR_Cp_freq1000.0")
-                    #cv10kHz_idx = headers.index("LCR_Cp_freq10000.0")
                     temp_idx = headers.index("Temperature")
                     rh_idx = headers.index("Humidity")
 
                     cv1kHz = []
                     c2 = []
-                    #cv10kHz = []
                     bv = []
                     temp = []
                     rh = []
 
                     data = txtLines[idx+1:]
+                    
                     for line in data:
+                        
                         words = line.split()
                         
                         bv.append(abs(float(words[0])))
@@ -257,14 +266,18 @@ for cviv in ["IV","CV"]:
                         rh.append(float(words[rh_idx]))
 
                     depV_idx.append(diode)
-                    depV.append(Vuong(bv, c2)[0])
+                    
+                    if 'PreIrrad' in cwd:
+                        
+                        depV.append(Vuong(bv, c2)[0])
+                    
                     for i in range(len(bv)):
                         #bv[i] = bv[i]
                         if temp[i] == 25.0:  temp[i] = 18.0
                         if temp[i] == 0.0:  temp[i] = 22.0
                         if rh[i] < 0: rh[i] = 4.0
 
-                elif "IV" in cvivDataFile:
+                if "IV" in cvivDataFile:
                     iv_idx = headers.index("Bias Current_Avg")
                     temp_idx = headers.index("Temperature")
                     rh_idx = headers.index("Humidity")
@@ -298,10 +311,10 @@ for cviv in ["IV","CV"]:
                     AvTemp = str(sum(temp)/len(temp))
                     AvRH = str(sum(rh)/len(rh))
 
-#iv = 0
-#cv = 0
+
 f = open("CumulData.txt", "w")
 f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\n")
+
 for diode in diodes:
     print(diode)
     #print ("File", file)
@@ -309,22 +322,17 @@ for diode in diodes:
     iv = curr_idx.index(diode)
     cv = depV_idx.index(diode)
     print(diode)
-    f.write(diode+"\t"+str(i600[iv])+"\t"+str(i800[iv])+"\t"+str(i1000[iv])+"\t"+str(depV[cv])+"\n")
-    #if "IV" in file:
-    #    f.write(file+"\t"+str(i600[iv])+"\t"+str(i800[iv])+"\t"+str(i1000[iv])+"\t\n")
-    #    iv += 1
-    #if "CV" in file:
-    #    f.write(file+"\t\t\t\t"+str(depV[cv])+"\n")
-    #    cv += 1
     
-print ("Currents Avg -600V: ", sum(i600)/len(i600))
-print ("Currents Std Dev -600V: ", stdev(i600))
-print ("Currents Avg -800V: ", mean(i800))
-print ("Currents Std Dev -800V: ", stdev(i800))
-print ("Currents Avg -1000V: ", mean(i1000))
-print ("Currents Std Dev -1000V: ", stdev(i1000))
-print ("Depletion Voltage Avg: ", mean(depV))
-print ("Depletion Voltage Std Dev: ", stdev(depV))
+    if 'PostIrrad' in cwd:
+        
+        f.write(diode+"\t"+str(i600[iv])+"\t"+str(i800[iv])+"\t"+str(i1000[iv])+"\n")
+        
+    if 'PreIrrad' in cwd:
+        
+        f.write(diode+"\t"+str(i600[iv])+"\t"+str(i800[iv])+"\t"+str(i1000[iv])+"\t"+str(depV[cv])+"\n")
+    
+    
+    
     
 
 
