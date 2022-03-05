@@ -20,10 +20,7 @@ def round_sig(x, sig=3, small_value=1.0e-9):
         return round(x, sig - int(floor(log10(max(abs(x), abs(small_value))))) - 1)
 
 # Get list of Files    
-def get_files():
-    
-    # Current Working Directory
-    cwd = os.getcwd() 
+def get_files(cwd):
     
     files = []
     
@@ -42,9 +39,20 @@ def get_diode_names(files):
     
     diode_names = []
     
+    
     for i in range(0, len(files)):
         
-        if 'IV' or 'CV' in files[i]:
+        if 'IV' in files[i]:
+            
+            split = files[i].strip('.txt').split("_")
+            diode = split[1] + "_" + split[2] + "_" + split[3] + "_" + split[4] + "_" + split[5] + "_" + split[6]
+            
+            if "GR" in split[7]: diode = diode + "_" + split[7]
+            if "IRRADSENSOR" and 'min' in split[7]: diode = diode + "_" + split[7]
+            
+            diode_names.append(diode)
+            
+        if 'CV' in files[i]:
             
             split = files[i].strip('.txt').split("_")
             diode = split[1] + "_" + split[2] + "_" + split[3] + "_" + split[4] + "_" + split[5] + "_" + split[6]
@@ -225,13 +233,41 @@ def make_culum_data_txt(IV, CV, diode_names):
     f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\n")
     
     for i in range(0, len(diode_names)):
-    
-    f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
+        
+        diode = diode_names[i]
+        
+        bias_current_average = IV[diode_names[i]]['Bias Current_Avg']
+        bias_voltage = IV[diode_names[i]]['BiasVoltage']
+        
+        for j in range(0, len(bias_current_average)):
+            
+            i600 = 0
+            i800 = 0
+            i1000 = 0
+            
+            if abs(bias_voltage[j]) == 600:
+                
+                i600 = bias_current_average[j]
+                
+            if abs(bias_voltage[j]) == 800:
+                
+                i800 = bias_current_average[j]
+                
+            if abs(bias_voltage[j]) == 1000:
+                
+                i1000 = bias_current_average[j]
+            
+        depV = CV[diode_names[i]]['Dep_V'][0]
+        
+        f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
 
 def main():	 
+    
+    # Current Working Directory
+    cwd = os.getcwd() 
 
     # Get list of Files    
-    file_names = get_files()
+    file_names = get_files(cwd)
             
     # Get Diode Names
     diode_names = get_diode_names(file_names)
