@@ -179,12 +179,12 @@ def find_depletion_voltage(CV, diode_names, plot = True):
         dep_v = 0
         dep_v_cap = 0
         
-        for i in range(0, len(bias_fit_left)):
+        for j in range(0, len(bias_fit_left)):
             
-            if capacitance_left_fit[i] <= capacitance_right_fit[i]:
+            if capacitance_left_fit[j] <= capacitance_right_fit[j]:
                 
-                dep_v = bias_fit_left[i]
-                dep_v_cap = capacitance_left_fit[i]
+                dep_v = bias_fit_left[j]
+                dep_v_cap = capacitance_left_fit[j]
                 
         if plot == True:
             
@@ -202,28 +202,38 @@ def find_depletion_voltage(CV, diode_names, plot = True):
             plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
             
         print(dep_v)
-            
-        CV[diode_names[i]]['DepV'] = dep_v
+        print(i)
+        print(diode_names)
+        print(diode_names[i])
+        print(CV[diode_names[i]])
+        
+        CV[diode_names[i]]['Dep_V'] = dep_v
     
     return CV 
 
 
-# Get list of Files    
-file_names = get_files()
-        
-# Get Diode Names
-diode_names = get_diode_names(file_names)
+def main():	 
 
-# Turn .txt Files into Dataframes
-IV, CV = get_iv_cv_dataframes(file_names, diode_names)
+    # Get list of Files    
+    file_names = get_files()
+            
+    # Get Diode Names
+    diode_names = get_diode_names(file_names)
+    
+    # Turn .txt Files into Dataframes
+    IV, CV = get_iv_cv_dataframes(file_names, diode_names)
+    
+    # Put 1/C^2 values into Dataframes
+    CV = get_capacitance_squared_values(CV, diode_names)
+    
+    # Get Depletion Values
+    CV = find_depletion_voltage(CV, diode_names, plot = True)
 
-# Put 1/C^2 values into Dataframes
-CV = get_capacitance_squared_values(CV, diode_names)
-
-# Get Depletion Values
-CV = find_depletion_voltage(CV, diode_names, plot = True)
 
 
+
+if __name__ == '__main__':
+	main()
 
 
 
