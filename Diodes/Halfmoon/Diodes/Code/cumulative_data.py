@@ -142,10 +142,19 @@ plt.plot(-1*CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage'], CV['37399_0
 # Label Plot
 plt.xlabel(r'Bias Voltage   $[V]$', fontsize = 18)
 plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
+print(CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage'])
+
+
+left_fit_bias = [-10, -100] 
+right_fit_bias = [-500, -600]
+
+left_fit_stop = [0, 0]
+right_fit_stop= [0, 0]
 
 
 
-#annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
+bias_fit_left = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
+bias_fit_right = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
 
 
 
