@@ -218,6 +218,15 @@ def find_depletion_voltage(CV, diode_names, plot = True):
     
     return CV 
 
+# Make CumulData.txt File
+def make_culum_data_txt(IV, CV, diode_names):
+    
+    f = open("CumulData.txt", "w")
+    f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\n")
+    
+    for i in range(0, len(diode_names)):
+    
+    f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
 
 def main():	 
 
@@ -236,9 +245,8 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, plot = False)
     
-    
-
-
+    # Make CumulData.txt File
+    make_culum_data_txt(IV, CV, diode_names)
 
 
 if __name__ == '__main__':
