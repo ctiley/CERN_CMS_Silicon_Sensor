@@ -108,6 +108,27 @@ def get_iv_cv_dataframes(file_names):
 def linear_fit(x, m, b):
     return  m*x + b
 
+def fit_endpoint_finder(data, fit_bias_values):
+
+    data_len = len(data)
+    fit_stop = [0,0]
+
+    if abs(bias_data[data_len - 1]) >= 1000:
+        
+        fit_bias_values[1] = bias_data[data_len]
+
+    for i in range(0, data_len):
+        
+        if abs(data[i]) <= abs(fit_bias_values[0]):
+            
+            fit_stop[0] = i    
+            
+        if abs(data[i]) >= abs(fit_bias_values[1]):
+            
+            fit_stop[1] = i    
+           
+            return fit_stop
+
 # Get list of Files    
 file_names = get_files(cwd)
         
@@ -129,38 +150,69 @@ for i in range(0, len(diode_names)):
         CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1']
 
 
-bias_voltage = CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage']
-capacitance = CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['1/C^2']
-
-# Initialize Plot
-plt.figure(figsize = (10, 8))
-
-# General Plot
-plt.plot(-1*CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage'], CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['1/C^2'])
-#plt.scatter(k_par_data, w_k_data, label = 'Data')
-
-# Label Plot
-plt.xlabel(r'Bias Voltage   $[V]$', fontsize = 18)
-plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
-print(CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage'])
-
-
-left_fit_bias = [-10, -100] 
-right_fit_bias = [-500, -600]
-
-left_fit_stop = [0, 0]
-right_fit_stop= [0, 0]
-
-
-
-bias_fit_left = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
-bias_fit_right = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
 
 
 
 
+def find_depletion_voltage(CV, plot = True):
+    
+    for i in range(0, len(diode_names)):
 
+        bias_data = CV[diode_names[i]]['BiasVoltage']
+        capacitance = CV[diode_names[i]]['1/C^2']
+        
+        left_fit_bias = [20, 200] 
+        right_fit_bias = [500, 600]
+        
+        left_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias)
+        right_fit_stop = fit_endpoint_finder(bias_data, right_fit_bias)
+        
+        left_bias_data = bias_data[left_fit_stop[0]:left_fit_stop[1]].to_numpy()
+        right_bias_data = bias_data[right_fit_stop[0]:right_fit_stop[1]].to_numpy()
+        
+        left_capacitance_data = capacitance[left_fit_stop[0]:left_fit_stop[1]].to_numpy()
+        right_capacitance_data = capacitance[right_fit_stop[0]:right_fit_stop[1]].to_numpy()
+        
+        bias_fit_left = np.linspace(bias_data[left_fit_stop[0]], bias_data[left_fit_stop[1]] - 200, 100)
+        bias_fit_right = np.linspace(0, bias_data[right_fit_stop[1]], 100)
+        
+        guess_left = [1378666666.6667, 124266666666.67]
+        guess_right = [0, 1e11]
+        
+        params_left, covariance_left = curve_fit(linear_fit, left_bias_data, left_capacitance_data, guess_left)
+        capacitance_left_fit = params_left[0]*bias_fit_left + params_left[1]
+        
+        params_right, covariance_right = curve_fit(linear_fit, right_bias_data, right_capacitance_data, guess_right)
+        capacitance_right_fit = params_right[0]*bias_fit_right + params_right[1]
+        
+        dep_v = 0
+        dep_v_cap = 0
+        
+        for i in range(0, len(bias_fit_left)):
+            
+            if capacitance_left_fit[i] <= capacitance_right_fit[i]:
+                
+                dep_v = bias_fit_left[i]
+                dep_v_cap = capacitance_left_fit[i]
+                
+        if plot == True:
+            
+            # Initialize Plot
+            plt.figure(figsize = (10, 8))
 
+            # General Plot
+            plt.scatter(-1*bias_data, capacitance, label = 'Data')
+            plt.plot(-1*bias_fit_left, capacitance_left_fit)
+            plt.plot(-1*bias_fit_right, capacitance_right_fit)
+            plt.plot(dep_v, dep_v_cap, label = 'Depletion Voltage')
+
+            # Label Plot
+            plt.xlabel(r'Bias Voltage   $[V]$', fontsize = 18)
+            plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
+            
+        CV[diode_names[i]]['DepV'] = dep_v
+    
+    return CV
 
 
 
