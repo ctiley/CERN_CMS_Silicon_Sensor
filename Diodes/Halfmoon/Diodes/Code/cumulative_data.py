@@ -8,11 +8,11 @@ import pandas as pd
 import os
 import csv
 
-# Current Working Directory
-cwd = os.getcwd() 
-
 # Get list of Files    
-def get_files(cwd):
+def get_files():
+    
+    # Current Working Directory
+    cwd = os.getcwd() 
     
     files = []
     
@@ -152,7 +152,7 @@ def find_depletion_voltage(CV, diode_names, plot = True):
         bias_data = CV[diode_names[i]]['BiasVoltage']
         capacitance = CV[diode_names[i]]['1/C^2']
         
-        left_fit_bias = [70, 200] 
+        left_fit_bias = [100, 190] 
         right_fit_bias = [500, 600]
         
         left_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias)
@@ -209,7 +209,7 @@ def find_depletion_voltage(CV, diode_names, plot = True):
 
 
 # Get list of Files    
-file_names = get_files(cwd)
+file_names = get_files()
         
 # Get Diode Names
 diode_names = get_diode_names(file_names)
