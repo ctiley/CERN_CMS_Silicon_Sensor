@@ -85,7 +85,7 @@ def file_to_dataframe(file_name):
     return df
 
 # This Function Takes File Names and Returns a Dictionary of Dataframes for Processing
-def get_iv_cv_dataframes(file_names):
+def get_iv_cv_dataframes(file_names, diode_names):
     
     IV = {}
     CV = {}
@@ -113,9 +113,9 @@ def fit_endpoint_finder(data, fit_bias_values):
     data_len = len(data)
     fit_stop = [0,0]
 
-    if abs(bias_data[data_len - 1]) >= 1000:
+    if abs(data[data_len - 1]) >= 1000:
         
-        fit_bias_values[1] = bias_data[data_len]
+        fit_bias_values[1] = data[data_len]
 
     for i in range(0, data_len):
         
@@ -129,39 +129,30 @@ def fit_endpoint_finder(data, fit_bias_values):
            
             return fit_stop
 
-# Get list of Files    
-file_names = get_files(cwd)
-        
-# Get Diode Names
-diode_names = get_diode_names(file_names)
-
-# Turn .txt Files into Dataframes
-IV, CV = get_iv_cv_dataframes(file_names)
-
 # Put 1/C^2 values into Dataframes
-for i in range(0, len(diode_names)):
-    
-    if 'LCR_Cp_freq1000.0' in CV[diode_names[i]].columns:
-    
-        CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1000.0']
-    
-    if 'LCR_Cp_freq1' in CV[diode_names[i]].columns:
-    
-        CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1']
+def get_capacitance_squared_values(CV, diode_names):
 
+    for i in range(0, len(diode_names)):
+        
+        if 'LCR_Cp_freq1000.0' in CV[diode_names[i]].columns:
+        
+            CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1000.0']
+        
+        if 'LCR_Cp_freq1' in CV[diode_names[i]].columns:
+        
+            CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1']
 
+    return CV 
 
-
-
-
-def find_depletion_voltage(CV, plot = True):
+# This Function Produces 1/C^2 Values
+def find_depletion_voltage(CV, diode_names, plot = True):
     
     for i in range(0, len(diode_names)):
 
         bias_data = CV[diode_names[i]]['BiasVoltage']
         capacitance = CV[diode_names[i]]['1/C^2']
         
-        left_fit_bias = [20, 200] 
+        left_fit_bias = [70, 200] 
         right_fit_bias = [500, 600]
         
         left_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias)
@@ -210,9 +201,31 @@ def find_depletion_voltage(CV, plot = True):
             plt.xlabel(r'Bias Voltage   $[V]$', fontsize = 18)
             plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
             
+        print(dep_v)
+            
         CV[diode_names[i]]['DepV'] = dep_v
     
-    return CV
+    return CV 
+
+
+# Get list of Files    
+file_names = get_files(cwd)
+        
+# Get Diode Names
+diode_names = get_diode_names(file_names)
+
+# Turn .txt Files into Dataframes
+IV, CV = get_iv_cv_dataframes(file_names, diode_names)
+
+# Put 1/C^2 values into Dataframes
+CV = get_capacitance_squared_values(CV, diode_names)
+
+# Get Depletion Values
+CV = find_depletion_voltage(CV, diode_names, plot = True)
+
+
+
+
 
 
 
