@@ -234,7 +234,9 @@ def main():
     CV = get_capacitance_squared_values(CV, diode_names)
     
     # Get Depletion Values
-    CV = find_depletion_voltage(CV, diode_names, plot = True)
+    CV = find_depletion_voltage(CV, diode_names, plot = False)
+    
+    
 
 
 
