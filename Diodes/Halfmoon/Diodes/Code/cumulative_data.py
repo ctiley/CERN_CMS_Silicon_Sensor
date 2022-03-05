@@ -8,6 +8,17 @@ import pandas as pd
 import os
 import csv
 
+# Is NaN Function
+def isNaN(num):
+    return num != num
+
+# Significant Figures Function
+def round_sig(x, sig=3, small_value=1.0e-9):
+    if isNaN(x) == True:
+        return x
+    else:
+        return round(x, sig - int(floor(log10(max(abs(x), abs(small_value))))) - 1)
+
 # Get list of Files    
 def get_files():
     
@@ -153,7 +164,7 @@ def find_depletion_voltage(CV, diode_names, plot = True):
         capacitance = CV[diode_names[i]]['1/C^2']
         
         left_fit_bias = [100, 190] 
-        right_fit_bias = [500, 600]
+        right_fit_bias = [450, 600]
         
         left_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias)
         right_fit_stop = fit_endpoint_finder(bias_data, right_fit_bias)
@@ -195,17 +206,13 @@ def find_depletion_voltage(CV, diode_names, plot = True):
             plt.scatter(-1*bias_data, capacitance, label = 'Data')
             plt.plot(-1*bias_fit_left, capacitance_left_fit)
             plt.plot(-1*bias_fit_right, capacitance_right_fit)
-            plt.plot(dep_v, dep_v_cap, label = 'Depletion Voltage')
+            plt.scatter(-1*dep_v, dep_v_cap, label = 'Depletion Voltage: ' + str(-1*round_sig(dep_v)))
 
             # Label Plot
+            plt.suptitle(diode_names[i], fontsize=20)
             plt.xlabel(r'Bias Voltage   $[V]$', fontsize = 18)
             plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
-            
-        print(dep_v)
-        print(i)
-        print(diode_names)
-        print(diode_names[i])
-        print(CV[diode_names[i]])
+            plt.legend(fontsize = 14)
         
         CV[diode_names[i]]['Dep_V'] = dep_v
     
