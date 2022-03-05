@@ -127,9 +127,10 @@ for i in range(0, len(diode_names)):
     if 'LCR_Cp_freq1' in CV[diode_names[i]].columns:
     
         CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1']
-        
 
 
+bias_voltage = CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['BiasVoltage']
+capacitance = CV['37399_049_PSS_HM_XX_DIODEHALFPSTOP']['1/C^2']
 
 # Initialize Plot
 plt.figure(figsize = (10, 8))
@@ -144,7 +145,7 @@ plt.ylabel(r'1/Capacitance   $[1/C^2]$', fontsize = 18)
 
 
 
-
+#annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
 
 
 
