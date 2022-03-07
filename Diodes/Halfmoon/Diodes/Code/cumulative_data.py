@@ -127,26 +127,30 @@ def get_iv_cv_dataframes(file_names, diode_names):
 def linear_fit(x, m, b):
     return  m*x + b
 
-def fit_endpoint_finder(data, fit_bias_values):
-
+def fit_endpoint_finder(data, fit_bias_values, right_distance):
+    
     data_len = len(data)
-    fit_stop = [0,0]
-
-    if abs(data[data_len - 1]) >= 1000:
-        
-        fit_bias_values[1] = data[data_len]
+    
+    left_fit_stop = [0,0]
+    right_fit_stop = [0, data_len - 1]
+    
+    for i in range(0, data_len):
+    
+        if abs(data[i]) <= abs(data[data_len - 1]) - right_distance:
+            
+            right_fit_stop[0] = i  
 
     for i in range(0, data_len):
         
         if abs(data[i]) <= abs(fit_bias_values[0]):
             
-            fit_stop[0] = i    
+            left_fit_stop[0] = i    
             
         if abs(data[i]) >= abs(fit_bias_values[1]):
             
-            fit_stop[1] = i    
+            left_fit_stop[1] = i    
            
-            return fit_stop
+            return left_fit_stop, right_fit_stop
 
 # Put 1/C^2 values into Dataframes
 def get_capacitance_squared_values(CV, diode_names):
@@ -160,22 +164,22 @@ def get_capacitance_squared_values(CV, diode_names):
         if 'LCR_Cp_freq1' in CV[diode_names[i]].columns:
         
             CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freq1']
+            
+        if 'LCR_Cp_freqNaN' in CV[diode_names[i]].columns:
+        
+            CV[diode_names[i]]['1/C^2'] = 1/CV[diode_names[i]]['LCR_Cp_freqNaN']
 
     return CV 
 
 # This Function Produces 1/C^2 Values
-def find_depletion_voltage(CV, diode_names, plot = True):
+def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance, extra_left_fit):
     
     for i in range(0, len(diode_names)):
 
         bias_data = CV[diode_names[i]]['BiasVoltage']
         capacitance = CV[diode_names[i]]['1/C^2']
         
-        left_fit_bias = [100, 190] 
-        right_fit_bias = [450, 600]
-        
-        left_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias)
-        right_fit_stop = fit_endpoint_finder(bias_data, right_fit_bias)
+        left_fit_stop, right_fit_stop = fit_endpoint_finder(bias_data, left_fit_bias, right_distance)
         
         left_bias_data = bias_data[left_fit_stop[0]:left_fit_stop[1]].to_numpy()
         right_bias_data = bias_data[right_fit_stop[0]:right_fit_stop[1]].to_numpy()
@@ -183,11 +187,13 @@ def find_depletion_voltage(CV, diode_names, plot = True):
         left_capacitance_data = capacitance[left_fit_stop[0]:left_fit_stop[1]].to_numpy()
         right_capacitance_data = capacitance[right_fit_stop[0]:right_fit_stop[1]].to_numpy()
         
-        bias_fit_left = np.linspace(bias_data[left_fit_stop[0]], bias_data[left_fit_stop[1]] - 200, 100)
+        bias_fit_left = np.linspace(bias_data[left_fit_stop[0]], bias_data[left_fit_stop[1]] - extra_left_fit, 100)
         bias_fit_right = np.linspace(0, bias_data[right_fit_stop[1]], 100)
         
-        guess_left = [1378666666.6667, 124266666666.67]
-        guess_right = [0, 1e11]
+        last_value = len(left_capacitance_data) - 1
+        
+        guess_left = [(left_capacitance_data[last_value] + left_capacitance_data[0])/(left_bias_data[last_value] + left_bias_data[0]), (left_capacitance_data[0] + left_capacitance_data[last_value])/2]
+        guess_right = [0, right_capacitance_data[0]]
         
         params_left, covariance_left = curve_fit(linear_fit, left_bias_data, left_capacitance_data, guess_left)
         capacitance_left_fit = params_left[0]*bias_fit_left + params_left[1]
@@ -198,12 +204,19 @@ def find_depletion_voltage(CV, diode_names, plot = True):
         dep_v = 0
         dep_v_cap = 0
         
+        
         for j in range(0, len(bias_fit_left)):
             
-            if capacitance_left_fit[j] <= capacitance_right_fit[j]:
+            if capacitance_left_fit[j] >= capacitance_right_fit[j]:
                 
                 dep_v = bias_fit_left[j]
                 dep_v_cap = capacitance_left_fit[j]
+                break
+                
+            if j == len(bias_fit_left) - 1:
+                    
+                    dep_v = bias_data.to_numpy()[-1]
+                    dep_v_cap = capacitance.to_numpy()[-1]                
                 
         if plot == True:
             
@@ -239,13 +252,13 @@ def make_culum_data_txt(IV, CV, diode_names):
         bias_current_average = IV[diode_names[i]]['Bias Current_Avg']
         bias_voltage = IV[diode_names[i]]['BiasVoltage']
         
+        i600 = 0
+        i800 = 0
+        i1000 = 0
+        
         for j in range(0, len(bias_current_average)):
             
-            i600 = 0
-            i800 = 0
-            i1000 = 0
-            
-            if abs(bias_voltage[j]) == 600:
+            if int(abs(bias_voltage[j])) == 600:
                 
                 i600 = bias_current_average[j]
                 
@@ -257,14 +270,21 @@ def make_culum_data_txt(IV, CV, diode_names):
                 
                 i1000 = bias_current_average[j]
             
-        depV = CV[diode_names[i]]['Dep_V'][0]
+        depV = abs(CV[diode_names[i]]['Dep_V'][0])
         
         f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
+
 
 def main():	 
     
     # Current Working Directory
     cwd = os.getcwd() 
+    
+    # Left Fit Estimation
+    left_fit_bias = [250, 350] 
+    extra_left_fit = 500
+    right_distance = 300
+    plot = True
 
     # Get list of Files    
     file_names = get_files(cwd)
@@ -279,19 +299,13 @@ def main():
     CV = get_capacitance_squared_values(CV, diode_names)
     
     # Get Depletion Values
-    CV = find_depletion_voltage(CV, diode_names, plot = False)
+    CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance, extra_left_fit)
     
     # Make CumulData.txt File
     make_culum_data_txt(IV, CV, diode_names)
 
-
 if __name__ == '__main__':
 	main()
-
-
-
-
-
 
 
 
