@@ -55,7 +55,7 @@ covariance_dict = {}
 fluence = 6.5*10**18
 
 guess = np.array([ 2.59046272e+00,  2.54614411e+19,  2.59153632e-01,  1.51895447e+01, -4.42517117e+00])
-guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 39.8])
+guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 10])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
     return ga*np.exp(-x/ta)*fluence + gy*(1.-1./(1.+x/ty))*fluence + NC
@@ -77,12 +77,12 @@ for i in range(0, file_size):
         annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
         
         ## Fitting for HGCAL Diodes W/O Shifting in Time
-        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
-        neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
+        # params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
+        # neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
         
         ## Fitting for HGCAL Diodes W/ Shift in Time
-        # params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
-        # neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
+        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
+        neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
 
 
 #%%
