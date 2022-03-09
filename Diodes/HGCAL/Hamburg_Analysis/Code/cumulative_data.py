@@ -13,7 +13,7 @@ def isNaN(num):
     return num != num
 
 # Significant Figures Function
-def round_sig(x, sig=5, small_value=1.0e-9):
+def round_sig(x, sig=3, small_value=1.0e-9):
     if isNaN(x) == True:
         return x
     else:
@@ -47,8 +47,7 @@ def get_diode_names(files):
             split = files[i].strip('.txt').split("_")
             diode = split[1] + "_" + split[2] + "_" + split[3] + "_" + split[4] + "_" + split[5] + "_" + split[6]
             
-            if "GR" in split[7]: diode = diode + "_" + split[7]
-            if "IRRADSENSOR" and 'min' in split[7]: diode = diode + "_" + split[7]
+            if "Annealed" in split: diode = diode + "_" + split[8] + "_" + split[9]
             
             diode_names.append(diode)
             
@@ -57,8 +56,7 @@ def get_diode_names(files):
             split = files[i].strip('.txt').split("_")
             diode = split[1] + "_" + split[2] + "_" + split[3] + "_" + split[4] + "_" + split[5] + "_" + split[6]
             
-            if "GR" in split[7]: diode = diode + "_" + split[7]
-            if "IRRADSENSOR" and 'min' in split[7]: diode = diode + "_" + split[7]
+            if "Annealed" in split: diode = diode + "_" + split[8] + "_" + split[9]
             
             diode_names.append(diode)
         
@@ -250,11 +248,46 @@ def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance,
     
     return CV 
 
+def findYPoint(xa, xb, ya, yb, xc):
+    
+    m = (ya - yb) / (xa - xb)
+    yc = (xc - xb) * m + yb
+    
+    return yc
+
+def get_current_at_depv(IV, CV, diode_names):
+    
+    for i in range(0, len(diode_names)):
+        
+        depV = CV[diode_names[i]]['Dep_V'][0]
+        BiasVoltage = IV[diode_names[i]]['BiasVoltage']
+        bias_current_average = IV[diode_names[i]]['Bias Current_Avg']
+        
+        for j in range(len(BiasVoltage)):
+            
+            if abs(BiasVoltage[j]) > abs(depV):
+                
+                xb = BiasVoltage[j]
+                yb = bias_current_average[j]
+                
+                break
+            
+            xa = BiasVoltage[j]
+            ya = bias_current_average[j]
+            
+        current_depv = findYPoint(xa, xb, ya, yb, depV)
+        
+        IV[diode_names[i]]['Current_Dep_V'] = current_depv
+        
+    return IV
+        
+
+
 # Make CumulData.txt File
 def make_culum_data_txt(IV, CV, diode_names):
     
-    f = open("CumulData.txt", "w")
-    f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\n")
+    f = open("CumulData.csv", "w")
+    f.write("File,I(600V),I(800V),I(1000V),DepV,I(DepV)\n")
     
     for i in range(0, len(diode_names)):
         
@@ -282,8 +315,9 @@ def make_culum_data_txt(IV, CV, diode_names):
                 i1000 = bias_current_average[j]
             
         depV = abs(CV[diode_names[i]]['Dep_V'][0])
+        current_depv = abs(IV[diode_names[i]]['Current_Dep_V'][0])
         
-        f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
+        f.write(diode+","+str(i600)+","+str(i800)+","+str(i1000)+","+str(depV)+","+str(current_depv)+"\n")
 
 
 
@@ -304,11 +338,12 @@ def main():
     cwd = os.getcwd() 
     
     # Left Fit Estimation
-    left_fit_bias = [250, 350] 
+    left_fit_bias = [160, 190] 
     extra_left_fit = 500
     right_distance = 500
+    
     plot = True
-
+    
     # Get list of Files    
     file_names = get_files(cwd)
             
@@ -324,11 +359,14 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance, extra_left_fit)
     
+    # Get Current at Depletion Voltage
+    IV = get_current_at_depv(IV, CV, diode_names)
+    
     # Make CumulData.txt File
     make_culum_data_txt(IV, CV, diode_names)
 
 if __name__ == '__main__':
-	main()
+ 	main()
 
 
 

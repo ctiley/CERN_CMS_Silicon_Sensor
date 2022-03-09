@@ -55,7 +55,7 @@ covariance_dict = {}
 fluence = 6.5*10**18
 
 guess = np.array([ 2.59046272e+00,  2.54614411e+19,  2.59153632e-01,  1.51895447e+01, -4.42517117e+00])
-guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 10])
+guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 80])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
     return ga*np.exp(-x/ta)*fluence + gy*(1.-1./(1.+x/ty))*fluence + NC
