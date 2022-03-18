@@ -370,10 +370,6 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_fit_length)
 
-    print(diode_names)
-    
-    CV['D0_CO195_LargeDiode_GRConnected_Irradiated_Annealed_0min_3']['Dep_V'][0] = 780
-
     # Get Current at Depletion Voltage
     IV = get_current_at_depv(IV, CV, diode_names)
 
