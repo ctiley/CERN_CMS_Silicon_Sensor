@@ -292,8 +292,8 @@ def get_current_at_depv(IV, CV, diode_names):
     return IV
 
 
-# Make CumulData.txt File
-def make_culum_data_txt(IV, CV, diode_names):
+# Make CumulData.csv File
+def make_culum_data_csv(IV, CV, diode_names):
     
     f = open("CumulData.csv", "w")
     f.write("File,I(600V),I(800V),I(1000V),DepV,I(DepV)\n")
@@ -327,6 +327,42 @@ def make_culum_data_txt(IV, CV, diode_names):
         current_depv = abs(IV[diode_names[i]]['Current_Dep_V'][0])
         
         f.write(diode+","+str(i600)+","+str(i800)+","+str(i1000)+","+str(depV)+","+str(current_depv)+"\n")
+
+# Make CumulData.txt File        
+def make_culum_data_txt(IV, CV, diode_names):
+    
+    f = open("CumulData.txt", "w")
+    f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\tI(DepV)\n")
+    
+    for i in range(0, len(diode_names)):
+        
+        diode = diode_names[i]
+        
+        bias_current_average = IV[diode_names[i]]['Bias Current_Avg']
+        bias_voltage = IV[diode_names[i]]['BiasVoltage']
+        
+        i600 = 0
+        i800 = 0
+        i1000 = 0
+        
+        for j in range(0, len(bias_current_average)):
+            
+            if int(abs(bias_voltage[j])) == 600:
+                
+                i600 = bias_current_average[j]
+                
+            if abs(bias_voltage[j]) == 800:
+                
+                i800 = bias_current_average[j]
+                
+            if abs(bias_voltage[j]) == 1000:
+                
+                i1000 = bias_current_average[j]
+            
+        depV = abs(CV[diode_names[i]]['Dep_V'][0])
+        current_depv = abs(IV[diode_names[i]]['Current_Dep_V'][0])
+        
+        f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\t"+str(current_depv)+"\n")
 
 
 
@@ -369,13 +405,14 @@ def main():
     
     print(diode_names)
     
-    #CV['38694_040_2-S_HM_XX_DIODEQUARTER']['Dep_V'][0] = 224.698
+    #CV['38695_002_2-S_HM_XX_DIODEQUARTER']['Dep_V'][0] = 315.01
 
     # Get Current at Depletion Voltage
     IV = get_current_at_depv(IV, CV, diode_names)
 
-    # Make CumulData.txt File
-    make_culum_data_txt(IV, CV, diode_names)
+    # Make CumulData Files
+    # make_culum_data_txt(IV, CV, diode_names)
+    # make_culum_data_csv(IV, CV, diode_names)
 
 if __name__ == '__main__':
 	main()
