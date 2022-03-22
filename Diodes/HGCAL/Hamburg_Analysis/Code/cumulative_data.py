@@ -188,7 +188,7 @@ def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance)
         right_capacitance_data = capacitance[right_fit_stop[0]:right_fit_stop[1]].to_numpy()
         
         bias_fit_left = np.linspace(bias_data[left_fit_stop[0]], bias_data[left_fit_stop[1]] + extra_left_fit, 1000)
-        bias_fit_right = np.linspace(500, bias_data[right_fit_stop[1]], 1000)
+        bias_fit_right = np.linspace(200, bias_data[right_fit_stop[1]], 1000)
         
         left_last_value = len(left_capacitance_data) - 1
         right_last_value = len(left_capacitance_data) - 1
@@ -349,9 +349,9 @@ def main():
     cwd = os.getcwd() 
 
     # Left Fit Estimation
-    left_fit_bias = [440, 600] 
+    left_fit_bias = [100, 180] 
     right_fit_bias = [950, 1100] 
-    right_fit_length = 150
+    right_fit_length = 300
 
     plot = True
 

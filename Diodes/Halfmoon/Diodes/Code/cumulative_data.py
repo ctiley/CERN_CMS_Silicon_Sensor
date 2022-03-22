@@ -250,11 +250,53 @@ def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance,
     
     return CV 
 
+def findYPoint(xa, xb, ya, yb, xc):
+    
+    m = (ya - yb) / (xa - xb)
+    yc = (xc - xb) * m + yb
+    
+    return yc
+
+
+def get_current_at_depv(IV, CV, diode_names):
+    
+    for i in range(0, len(diode_names)):
+        
+        depV = CV[diode_names[i]]['Dep_V'][0]
+        BiasVoltage = abs(IV[diode_names[i]]['BiasVoltage'])
+        bias_current_average = IV[diode_names[i]]['Bias Current_Avg']
+        
+        for j in range(len(BiasVoltage)):
+            
+            if abs(BiasVoltage[j]) > abs(depV):
+                
+                xb = BiasVoltage[j]
+                yb = bias_current_average[j]
+                
+                break
+            
+            xa = BiasVoltage[j]
+            ya = bias_current_average[j]
+        
+        if abs(depV) < 940:
+            
+            current_depv = findYPoint(xa, xb, ya, yb, depV)
+        
+        
+        else:
+            
+            current_depv = abs(bias_current_average[len(bias_current_average) - 1])
+        
+        IV[diode_names[i]]['Current_Dep_V'] = current_depv
+        
+    return IV
+
+
 # Make CumulData.txt File
 def make_culum_data_txt(IV, CV, diode_names):
     
-    f = open("CumulData.txt", "w")
-    f.write("File\tI(600V)\tI(800V)\tI(1000V)\tDepV\n")
+    f = open("CumulData.csv", "w")
+    f.write("File,I(600V),I(800V),I(1000V),DepV,I(DepV)\n")
     
     for i in range(0, len(diode_names)):
         
@@ -282,8 +324,9 @@ def make_culum_data_txt(IV, CV, diode_names):
                 i1000 = bias_current_average[j]
             
         depV = abs(CV[diode_names[i]]['Dep_V'][0])
+        current_depv = abs(IV[diode_names[i]]['Current_Dep_V'][0])
         
-        f.write(diode+"\t"+str(i600)+"\t"+str(i800)+"\t"+str(i1000)+"\t"+str(depV)+"\n")
+        f.write(diode+","+str(i600)+","+str(i800)+","+str(i1000)+","+str(depV)+","+str(current_depv)+"\n")
 
 
 
@@ -304,9 +347,9 @@ def main():
     cwd = os.getcwd() 
     
     # Left Fit Estimation
-    left_fit_bias = [250, 350] 
-    extra_left_fit = 500
-    right_distance = 500
+    left_fit_bias = [260, 400] 
+    extra_left_fit = 400
+    right_distance = 300
     plot = True
 
     # Get list of Files    
@@ -324,6 +367,13 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance, extra_left_fit)
     
+    print(diode_names)
+    
+    #CV['38694_040_2-S_HM_XX_DIODEQUARTER']['Dep_V'][0] = 224.698
+
+    # Get Current at Depletion Voltage
+    IV = get_current_at_depv(IV, CV, diode_names)
+
     # Make CumulData.txt File
     make_culum_data_txt(IV, CV, diode_names)
 

@@ -77,12 +77,12 @@ for i in range(0, file_size):
         annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
         
         ## Fitting for HGCAL Diodes W/O Shifting in Time
-        # params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
-        # neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
+        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
+        neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
         
         ## Fitting for HGCAL Diodes W/ Shift in Time
-        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
-        neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
+        # params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
+        # neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
 
 
 #%%
@@ -187,6 +187,26 @@ plt.legend(fontsize = 14)
 
 plt.savefig('HGCAL_2.3_Back' + '.png', dpi=900)
 
+
+#%%
+# HGCAL Campaign Round 2.4 Back
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+
+plt.suptitle('HGCAL Campaign Round 2.3 Back', fontsize=20)
+
+plt.scatter(annealing_dict['N4789_20_UL_DIODE'], neff_dict['N4789_20_UL_DIODE'], label = r'N4789_20_UL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_20_UL_DIODEHALF'], neff_dict['N4789_20_UL_DIODEHALF'], label = r'N4789_20_UL_DIODEHALF $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_20_UL_DIODEQUARTER'], neff_dict['N4789_20_UL_DIODEQUARTER'], label = r'N4789_20_UL_DIODEQUARTER $N_{eff}$ Data')
+
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.4_Back' + '.png', dpi=900)
+
 #%%
 # HGCAL Campaign Round 2.5 Front
 
@@ -243,7 +263,61 @@ plt.legend(fontsize = 14)
 plt.savefig('HGCAL_2.5_Back' + '.png', dpi=900)
 
 
+#%%
+# HGCAL Campaign Round 2.6 Front
 
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_20_UR_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_20_UR_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+
+plt.suptitle('HGCAL Campaign Round 2.6 Front', fontsize=20)
+
+plt.scatter(annealing_dict['N4789_20_UR_DIODE'], neff_dict['N4789_20_UR_DIODE'], label = r'N4789_20_UR_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_20_UR_DIODEQUARTER'], neff_dict['N4789_20_UR_DIODEQUARTER'], label = r'N4789_20_UR_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_20_UR_DIODE'], neff_fit_dict['N4789_20_UR_DIODE'])
+# plt.plot(annealing_fit_dict['N4789_20_UR_DIODEQUARTER'], neff_fit_dict['N4789_20_UR_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_20_UR_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_20_UR_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.6_Front' + '.png', dpi=900)
+
+
+#%%
+# HGCAL Campaign Round 2.6 Back
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UR_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UR_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+
+plt.suptitle('HGCAL Campaign Round 2.6 Back', fontsize=20)
+
+plt.scatter(annealing_dict['N4789_24_UR_DIODE'], neff_dict['N4789_24_UR_DIODE'], label = r'N4789_24_UR_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_UR_DIODEQUARTER'], neff_dict['N4789_24_UR_DIODEQUARTER'], label = r'N4789_24_UR_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_24_UR_DIODE'], neff_fit_dict['N4789_24_UR_DIODE'])
+plt.plot(annealing_fit_dict['N4789_24_UR_DIODEQUARTER'], neff_fit_dict['N4789_24_UR_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_24_UR_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_24_UR_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.6_Back' + '.png', dpi=900)
 
 
 
