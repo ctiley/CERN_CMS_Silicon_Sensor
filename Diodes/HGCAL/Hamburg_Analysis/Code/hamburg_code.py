@@ -55,6 +55,7 @@ covariance_dict = {}
 fluence = 6.5*10**18
 
 guess = np.array([ 2.59046272e+00,  2.54614411e+19,  2.59153632e-01,  1.51895447e+01, -4.42517117e+00])
+guess = np.array([ 2.99080953e+00,  1.00000000e+00, -1.37453483e+00,  5.17326207e+09, 1.48335632e+01])
 guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 80])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
@@ -77,7 +78,7 @@ for i in range(0, file_size):
         annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
         
         ## Fitting for HGCAL Diodes W/O Shifting in Time
-        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
+        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name], guess)
         neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
         
         ## Fitting for HGCAL Diodes W/ Shift in Time
@@ -318,6 +319,123 @@ plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
 plt.legend(fontsize = 14)
 
 plt.savefig('HGCAL_2.6_Back' + '.png', dpi=900)
+
+
+#%%
+# HGCAL Campaign Round 2.7 Front
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UL_DIODE')
+min_neff_DIODEHALF, min_anneal_time_DIODEHALF =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UL_DIODEHALF')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_UL_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.7 Front', fontsize=20)
+plt.scatter(annealing_dict['N4789_24_UL_DIODE'], neff_dict['N4789_24_UL_DIODE'], label = r'N4789_24_UL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_UL_DIODEHALF'], neff_dict['N4789_24_UL_DIODEHALF'], label = r'N4789_24_UL_DIODEHALF $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_UL_DIODEQUARTER'], neff_dict['N4789_24_UL_DIODEQUARTER'], label = r'N4789_24_UL_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_24_UL_DIODE'], neff_fit_dict['N4789_24_UL_DIODE'])
+plt.plot(annealing_fit_dict['N4789_24_UL_DIODEHALF'], neff_fit_dict['N4789_24_UL_DIODEHALF'])
+plt.plot(annealing_fit_dict['N4789_24_UL_DIODEQUARTER'], neff_fit_dict['N4789_24_UL_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_24_UL_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEHALF, min_neff_DIODEHALF, label = 'N4789_24_UL_DIODEHALF Minimum at ' + str(round_sig(min_anneal_time_DIODEHALF)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_24_UL_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.7_Front' + '.png', dpi=900)
+
+
+#%%
+# HGCAL Campaign Round 2.7 Back
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LR_DIODE')
+min_neff_DIODEHALF, min_anneal_time_DIODEHALF =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LR_DIODEHALF')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_24_LR_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('HGCAL Campaign Round 2.7 Back', fontsize=20)
+plt.scatter(annealing_dict['N4789_24_LR_DIODE'], neff_dict['N4789_24_LR_DIODE'], label = r'N4789_24_LR_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_LR_DIODEHALF'], neff_dict['N4789_24_LR_DIODEHALF'], label = r'N4789_24_LR_DIODEHALF $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_24_LR_DIODEQUARTER'], neff_dict['N4789_24_LR_DIODEQUARTER'], label = r'N4789_24_LR_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_24_LR_DIODE'], neff_fit_dict['N4789_24_LR_DIODE'])
+plt.plot(annealing_fit_dict['N4789_24_LR_DIODEHALF'], neff_fit_dict['N4789_24_LR_DIODEHALF'])
+plt.plot(annealing_fit_dict['N4789_24_LR_DIODEQUARTER'], neff_fit_dict['N4789_24_LR_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_24_LR_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEHALF, min_neff_DIODEHALF, label = 'N4789_24_LR_DIODEHALF Minimum at ' + str(round_sig(min_anneal_time_DIODEHALF)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_24_LR_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.7_Back' + '.png', dpi=900)
+
+
+#%%
+# HGCAL Campaign Round 2.8 Front
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_19_UR_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_19_UR_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+
+plt.suptitle('HGCAL Campaign Round 2.8 Front', fontsize=20)
+
+plt.scatter(annealing_dict['N4789_19_UR_DIODE'], neff_dict['N4789_19_UR_DIODE'], label = r'N4789_19_UR_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_19_UR_DIODEQUARTER'], neff_dict['N4789_19_UR_DIODEQUARTER'], label = r'N4789_19_UR_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_19_UR_DIODE'], neff_fit_dict['N4789_19_UR_DIODE'])
+plt.plot(annealing_fit_dict['N4789_19_UR_DIODEQUARTER'], neff_fit_dict['N4789_19_UR_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_19_UR_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_19_UR_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.8_Front' + '.png', dpi=900)
+
+
+#%%
+# HGCAL Campaign Round 2.8 Back
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_19_LL_DIODE')
+min_neff_DIODEQUARTER, min_anneal_time_DIODEQUARTER =  find_minimum(neff_fit_dict, annealing_fit_dict, 'N4789_19_LL_DIODEQUARTER')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+
+plt.suptitle('HGCAL Campaign Round 2.8 Back', fontsize=20)
+
+plt.scatter(annealing_dict['N4789_19_LL_DIODE'], neff_dict['N4789_19_LL_DIODE'], label = r'N4789_19_LL_DIODE $N_{eff}$ Data')
+plt.scatter(annealing_dict['N4789_19_LL_DIODEQUARTER'], neff_dict['N4789_19_LL_DIODEQUARTER'], label = r'N4789_19_LL_DIODEQUARTER $N_{eff}$ Data')
+
+plt.plot(annealing_fit_dict['N4789_19_LL_DIODE'], neff_fit_dict['N4789_19_LL_DIODE'])
+plt.plot(annealing_fit_dict['N4789_19_LL_DIODEQUARTER'], neff_fit_dict['N4789_19_LL_DIODEQUARTER'])
+
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'N4789_19_LL_DIODE Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+plt.scatter(min_anneal_time_DIODEQUARTER, min_neff_DIODEQUARTER, label = 'N4789_19_LL_DIODEQUARTER Minimum at ' + str(round_sig(min_anneal_time_DIODEQUARTER)) + ' min')
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+
+plt.legend(fontsize = 14)
+
+plt.savefig('HGCAL_2.8_Back' + '.png', dpi=900)
+
+
+
 
 
 
