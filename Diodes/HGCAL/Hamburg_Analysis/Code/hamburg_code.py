@@ -54,8 +54,8 @@ covariance_dict = {}
 # Fitting Items
 fluence = 6.5*10**18
 
-guess = np.array([ 2.59046272e+00,  2.54614411e+19,  2.59153632e-01,  1.51895447e+01, -4.42517117e+00])
-guess = np.array([ 2.99080953e+00,  1.00000000e+00, -1.37453483e+00,  5.17326207e+09, 1.48335632e+01])
+#guess = np.array([ 2.59046272e+00,  2.54614411e+19,  2.59153632e-01,  1.51895447e+01, -4.42517117e+00])
+#guess = np.array([ 2.99080953e+00,  1.00000000e+00, -1.37453483e+00,  5.17326207e+09, 1.48335632e+01])
 guess_shift = np.array([6.03709873e-01, 2.23775501e+19, 6.12224545e-01, 5.41529930e+00, 4.09569161e+01, 80])
 
 def Hamburg(x, ga, NC, gy, ta, ty):
@@ -78,13 +78,33 @@ for i in range(0, file_size):
         annealing_fit_dict[diode_name] = np.linspace(annealing_dict[diode_name][0], annealing_dict[diode_name][len_dict[diode_name]], 1000)
         
         ## Fitting for HGCAL Diodes W/O Shifting in Time
-        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name], guess)
+        params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg, annealing_dict[diode_name], neff_dict[diode_name])#, guess)
         neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
         
         ## Fitting for HGCAL Diodes W/ Shift in Time
         # params_dict[diode_name], covariance_dict[diode_name] = curve_fit(Hamburg_shift, annealing_dict[diode_name], neff_dict[diode_name], guess_shift)
         # neff_fit_dict[diode_name] = (params_dict[diode_name][0]*np.exp(-(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][3])*fluence + params_dict[diode_name][2]*(1.-1./(1.+(annealing_fit_dict[diode_name] -  params_dict[diode_name][5])/params_dict[diode_name][4]))*fluence + params_dict[diode_name][1])
 
+
+#%%
+# Ljubljana_Diodes Hamburg
+
+# Get Minimum Values
+min_neff_DIODE, min_anneal_time_DIODE =  find_minimum(neff_fit_dict, annealing_fit_dict, 'CO138_DIODE_Neff_vs_Annealing')
+
+# Plot Fits 
+figure(figsize=(12, 7), dpi=100)
+plt.suptitle('Ljubljana DZero Hamburg Analysis', fontsize=20)
+
+plt.scatter(annealing_dict['CO138_DIODE_Neff_vs_Annealing'], neff_dict['CO138_DIODE_Neff_vs_Annealing'], label = r'DO_138_Large_GR  $N_{eff}$ Data')
+plt.plot(annealing_fit_dict['CO138_DIODE_Neff_vs_Annealing'], neff_fit_dict['CO138_DIODE_Neff_vs_Annealing'])
+plt.scatter(min_anneal_time_DIODE, min_neff_DIODE, label = 'DO_138_Large_GR Minimum at ' + str(round_sig(min_anneal_time_DIODE)) + ' min')
+
+plt.xlabel('Annealing (min)', fontsize=22)
+plt.ylabel(r'$N_{eff}$  $\propto$ $V_{depletion}$', fontsize=22)
+plt.legend(fontsize = 14)
+
+plt.savefig('CO138_Neff_vs_Annealing' + '.png', dpi=900)
 
 #%%
 # HGCAL Campaign Round 2.2 Front
