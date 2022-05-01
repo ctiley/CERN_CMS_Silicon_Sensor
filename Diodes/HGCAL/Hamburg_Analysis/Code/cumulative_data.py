@@ -349,7 +349,7 @@ def main():
     cwd = os.getcwd() 
 
     # Left Fit Estimation
-    left_fit_bias = [80, 100] 
+    left_fit_bias = [80, 110] 
     right_fit_length = 500
 
     plot = True
@@ -369,9 +369,9 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_fit_length)
 
-    # CV['N4789_24_LR_DIODE_GR_Irradiated_60C_180min']['Dep_V'] = 272.25
-    # CV['N4789_24_LR_DIODEHALF_GR_Irradiated_60C_180min']['Dep_V'] = 281
-    # CV['N4789_24_UL_DIODEQUARTER_GR_Irradiated_60C_180min']['Dep_V'] = 217.9
+    # CV['N4789_20_UR_DIODE_GR_Irradiated_60C_190min']['Dep_V'] = 290.33
+    # CV['N4789_20_UR_DIODEHALF_GR_Irradiated_60C_190min']['Dep_V'] = 302.19
+    # CV['N4789_20_UR_DIODEQUARTER_GR_Irradiated_60C_190min']['Dep_V'] = 384.05
 
 
     # Get Current at Depletion Voltage
