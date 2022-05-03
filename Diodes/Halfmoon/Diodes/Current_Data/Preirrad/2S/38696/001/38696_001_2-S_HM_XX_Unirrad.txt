@@ -1,0 +1,20 @@
+#Open Capacitance 1000Hz:Not Measured
+#Open Capacitance 1000000Hz:4.287540E-12
+#38696_001_2-S_HM_XX_Unirrad
+#Date/Time: 4/1/2022 11:07:25 AM
+#Sensor Name: 38696_001_2-S_HM_XX
+#Station: Tesla
+#Annealing Status: Not Irradiated
+#Environment: 23.5C
+#Tester: Eric Spencer
+
+#Notes: Cleaved at Brown
+
+#Time Delay per Ramp Step (s): 0.000
+
+#Time Delay per Measurement (s) :0.000
+
+#Number of measurements per voltage: 0.000
+
+
+

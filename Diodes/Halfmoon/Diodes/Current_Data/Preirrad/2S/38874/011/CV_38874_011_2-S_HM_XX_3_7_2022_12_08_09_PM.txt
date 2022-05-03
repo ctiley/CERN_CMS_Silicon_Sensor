@@ -1,0 +1,31 @@
+38874_011_2-S_HM_XX_Unirrad
+Date/Time: 3/7/2022 12:08:09 PM
+Sensor Name: 38874_011_2-S_HM_XX
+Station: Tesla
+Annealing Status: Not Irradiated
+Environment: 20C
+Tester: Eric Spencer
+Notes: Cleaved at Brown
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.500
+
+
+BiasVoltage	LCR_Cp_freq1	LCR_G_freq1	Temperature	Air_Temp	Humidity	Dewpoint	
+   -5.0000	4.360E-10	4.817E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -10.0000	4.368E-10	4.852E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -15.0000	4.376E-10	4.822E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -20.0000	4.383E-10	4.823E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -25.0000	4.385E-10	4.895E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -30.0000	4.401E-10	4.875E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -35.0000	4.395E-10	4.925E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -40.0000	4.406E-10	4.915E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -45.0000	4.411E-10	5.003E-7	   20.0000	   27.4997	    1.2796	    0.0000	
+  -50.0000	4.412E-10	4.965E-7	   20.0000	   27.4997	    1.2796	    0.0000	

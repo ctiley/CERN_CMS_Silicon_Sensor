@@ -1,0 +1,27 @@
+34252_018_PSS_HM_XX_Irrad_-10C
+Date/Time: 6/25/2021 3:50:03 PM
+Sensor Name: 34252_004_PSS_HM_XX
+Type: P
+Annealing Status: 20 minutes
+Environment: -10C
+Tester: Eric Spencer
+Notes: Irradiated to 1.1e15 at RINSC
+
+Time Delay per Ramp Step (s): 1.000
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.500
+
+
+BiasVoltage	Bias Current_Avg	Bias Current_0	Bias Current_1	Bias Current_2	Bias Current_3	Temperature	Air_Temp	Humidity	Dewpoint	
+  -10.0000	-9.9798E-7	-9.9807E-7	-9.9780E-7	-9.9805E-7	-9.9799E-7	  -10.0020	   24.4847	    7.6248	    0.0000	
+  -20.0000	-9.9826E-7	-9.9826E-7	-9.9825E-7	-9.9826E-7	-9.9830E-7	  -10.0020	   24.4847	    7.6248	    0.0000	
+  -30.0000	-9.9704E-7	-9.9706E-7	-9.9717E-7	-9.9688E-7	-9.9706E-7	  -10.0020	   24.4847	    7.6248	    0.0000	
+  -40.0000	-9.9711E-7	-9.9700E-7	-9.9708E-7	-9.9724E-7	-9.9712E-7	  -10.0020	   24.4847	    7.6248	    0.0000	
+  -50.0000	-9.9697E-7	-9.9710E-7	-9.9692E-7	-9.9689E-7	-9.9698E-7	  -10.0020	   24.4847	    7.6248	    0.0000	
+  -60.0000	-9.9725E-7	-9.9742E-7	-9.9715E-7	-9.9728E-7	-9.9716E-7	  -10.0020	   24.4847	    7.6248	    0.0000	

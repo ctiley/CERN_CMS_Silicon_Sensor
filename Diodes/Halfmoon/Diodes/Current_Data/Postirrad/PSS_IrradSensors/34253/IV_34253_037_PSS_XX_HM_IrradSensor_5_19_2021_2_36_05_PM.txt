@@ -1,0 +1,22 @@
+34253_037_PSS_XX_HM_IrradSensor
+Date/Time: 5/19/2021 2:36:05 PM
+Sensor Name: 34253_037_PSS_XX_HM_IrradSensor
+Type: P
+Annealing Status: 20 minutes
+Environment: -20C
+Tester: Eric Spencer
+Notes: Irradiated to 1.1e15 at RINSC
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.500
+
+
+BiasVoltage	Bias Current_Avg	Bias Current_0	Bias Current_1	Bias Current_2	Bias Current_3	
+   -5.0000	9.9000E+37	9.9000E+37	9.9000E+37	9.9000E+37	9.9000E+37	

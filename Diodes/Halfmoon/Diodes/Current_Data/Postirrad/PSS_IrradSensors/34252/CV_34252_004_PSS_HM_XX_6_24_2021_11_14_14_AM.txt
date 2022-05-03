@@ -1,0 +1,31 @@
+TestBoard_R2
+Date/Time: 6/24/2021 11:14:14 AM
+Sensor Name: 34252_004_PSS_HM_XX
+Type: Type
+Annealing Status: Not Irradiated
+Environment: RT
+Tester: Eric Spencer
+Notes: 
+
+Time Delay per Ramp Step (s): 0.500
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.500
+
+
+BiasVoltage	LCR_Cp_freq1	LCR_G_freq1	Temperature	Air_Temp	Humidity	Dewpoint	
+   -5.0000	5.488E-13	-9.606E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -10.0000	5.478E-13	-4.709E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -15.0000	5.537E-13	-5.173E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -20.0000	5.119E-13	-5.457E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -25.0000	6.171E-13	-5.957E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -30.0000	5.771E-13	-7.882E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -35.0000	6.077E-13	-4.024E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -40.0000	5.862E-13	-7.886E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -45.0000	5.933E-13	-4.899E-10	    0.0000	    0.0000	    0.0000	    0.0000	
+  -50.0000	5.782E-13	-1.713E-10	    0.0000	    0.0000	    0.0000	    0.0000	

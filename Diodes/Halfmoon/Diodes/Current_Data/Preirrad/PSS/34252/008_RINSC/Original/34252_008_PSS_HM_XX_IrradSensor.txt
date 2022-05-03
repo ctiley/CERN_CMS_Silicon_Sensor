@@ -1,0 +1,24 @@
+#Open Capacitance 1000Hz:6.290090E-12
+#Open Capacitance 100000Hz:Not Measured
+#34352_008_PSS_HM_XX_IrradSensor
+#Date/Time: 4/19/2021 2:49:28 PM
+#Sensor Name: 34352_008_PSS_HM_XX_IrradSensor
+#Type: P
+#Annealing Status: Not Irradiated
+#Environment: RT
+#Tester: Eric Spencer
+
+#Notes: 
+
+#Time Delay per Ramp Step (s): 0.000
+
+#Time Delay per Measurement (s) :0.000
+
+#Number of measurements per voltage: 0.000
+
+
+
+Strip 	Time	RH	ChuckT	AirT	Global Current	Pinhole	Coupling Cap	Istrip_0	Istrip_1	Istrip_2	Istrip_3	Istrip_Mean	Istrip_Median	I_RBias_V-5.0
+1	3701703037.365627	4.307324	27.525766	25.628143	-4.700000E-10	-3.895023E-11	6.222230E-12	-1.811066E-11	-1.495321E-11	-1.101566E-10	-5.214042E-11	-4.884022E-11	-3.512554E-11	5.814730E-10
+2	3701703054.086008	4.276683	27.527312	25.637358	-4.800000E-10	-4.200556E-11	6.166940E-12	-1.811066E-11	-1.495321E-11	-1.101566E-10	-5.214042E-11	-4.884022E-11	-3.512554E-11	-3.427851E-10
+3	3701703070.582319	4.266093	27.526597	25.626795

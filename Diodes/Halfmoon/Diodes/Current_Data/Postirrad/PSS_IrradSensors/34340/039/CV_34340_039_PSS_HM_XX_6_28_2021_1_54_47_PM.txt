@@ -1,0 +1,31 @@
+34340_039_PSS_HM_XX_Irrad_-10C
+Date/Time: 6/28/2021 1:54:47 PM
+Sensor Name: 34340_039_PSS_HM_XX
+Type: P
+Annealing Status: 20 minutes
+Environment: -10C
+Tester: Eric Spencer
+Notes: Irradiated to 1.1e15 at RINSC
+
+Time Delay per Ramp Step (s): 1.000
+
+CV Time Delay per Measurement (s) :0.500
+
+AC Voltage (V): 0.500
+
+Current Number of measurements per voltage: 4.000
+
+IV Time Delay per Measurement (s) :0.500
+
+
+BiasVoltage	LCR_Cp_freq1	LCR_G_freq1	Temperature	Air_Temp	Humidity	Dewpoint	
+  -10.0000	4.007E-10	4.357E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -20.0000	3.673E-10	3.246E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -30.0000	3.360E-10	2.682E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -40.0000	3.122E-10	2.351E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -50.0000	2.926E-10	2.117E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -60.0000	2.778E-10	1.952E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -70.0000	2.640E-10	1.830E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -80.0000	2.456E-10	1.394E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+  -90.0000	2.355E-10	1.332E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
+ -100.0000	2.293E-10	1.325E-6	  -10.0008	   21.8569	   10.6216	    0.0000	
