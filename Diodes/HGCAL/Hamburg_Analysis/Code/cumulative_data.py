@@ -349,7 +349,7 @@ def main():
     cwd = os.getcwd() 
 
     # Left Fit Estimation
-    left_fit_bias = [240, 350] 
+    left_fit_bias = [280, 380] 
     right_fit_length = 100
 
     plot = True
