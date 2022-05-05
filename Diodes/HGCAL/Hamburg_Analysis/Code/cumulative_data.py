@@ -193,8 +193,11 @@ def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance)
         left_last_value = len(left_capacitance_data) - 1
         right_last_value = len(right_capacitance_data) - 1
         
-        guess_left = [(left_capacitance_data[left_last_value] + left_capacitance_data[0])/(left_bias_data[left_last_value] + left_bias_data[0]), (left_capacitance_data[0] + left_capacitance_data[left_last_value])/2]
-        guess_right = [(right_capacitance_data[right_last_value] + right_capacitance_data[0])/(right_bias_data[right_last_value] + right_bias_data[0]), right_capacitance_data[0]]
+        guess_left = [(left_capacitance_data[left_last_value] + left_capacitance_data[0])/(left_bias_data[left_last_value] + 
+                                                                                           left_bias_data[0]), (left_capacitance_data[0] + 
+                                                                                                                left_capacitance_data[left_last_value])/2]
+        guess_right = [(right_capacitance_data[right_last_value] + right_capacitance_data[0])/(right_bias_data[right_last_value] + 
+                                                                                               right_bias_data[0]), right_capacitance_data[0]]
         
         params_left, covariance_left = curve_fit(linear_fit, left_bias_data, left_capacitance_data, guess_left)
         capacitance_left_fit = params_left[0]*bias_fit_left + params_left[1]
@@ -349,8 +352,8 @@ def main():
     cwd = os.getcwd() 
 
     # Left Fit Estimation
-    left_fit_bias = [500, 830] 
-    right_fit_length = 100
+    left_fit_bias = [300, 550] 
+    right_fit_length = 300
 
     plot = True
 
@@ -369,7 +372,7 @@ def main():
     # Get Depletion Values
     CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_fit_length)
 
-    # CV['N4789_20_UR_DIODE_GR_Irradiated_60C_190min']['Dep_V'] = 290.33
+    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_0min']['Dep_V'] = 640
     # CV['N4789_20_UR_DIODEHALF_GR_Irradiated_60C_190min']['Dep_V'] = 302.19
     # CV['N4789_20_UR_DIODEQUARTER_GR_Irradiated_60C_190min']['Dep_V'] = 384.05
 
