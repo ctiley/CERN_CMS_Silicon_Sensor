@@ -19,7 +19,7 @@ Current Number of measurements per voltage: 1.000
 IV Time Delay per Measurement (s) :0.000
 
 
-BiasVoltage	LCR_Cp_freq1000.0	LCR_Rp_freq1000.0	Temperature	Air_Temp	Humidity	Dewpoint	
+BiasVoltage	LCR_Cp_freqNaN	LCR_Rp_freqNaN	Temperature	Air_Temp	Humidity	Dewpoint	
    -5.0000	2.274E-11	6.767E+8	   22.7642	   22.9756	   19.2451	   -1.6937	
   -10.0000	1.746E-11	4.801E+8	   22.7616	   22.9747	   19.2407	   -1.6975	
   -15.0000	1.506E-11	5.201E+8	   22.7616	   22.9747	   19.2407	   -1.6975	

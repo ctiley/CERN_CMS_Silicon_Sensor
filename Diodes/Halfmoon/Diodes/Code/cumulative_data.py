@@ -383,7 +383,7 @@ def main():
     cwd = os.getcwd() 
     
     # Left Fit Estimation
-    left_fit_bias = [260, 400] 
+    left_fit_bias = [120, 200] 
     extra_left_fit = 400
     right_distance = 300
     plot = True
@@ -411,8 +411,8 @@ def main():
     IV = get_current_at_depv(IV, CV, diode_names)
 
     # Make CumulData Files
-    # make_culum_data_txt(IV, CV, diode_names)
-    # make_culum_data_csv(IV, CV, diode_names)
+    make_culum_data_txt(IV, CV, diode_names)
+    make_culum_data_csv(IV, CV, diode_names)
 
 if __name__ == '__main__':
 	main()
