@@ -7,6 +7,58 @@ import pandas as pd
 
 import os
 
+
+def main():	 
+    
+    # Current Working Directory
+    cwd = os.getcwd() 
+
+    # Left Fit Estimation
+    left_fit_bias = [20, 80] 
+    right_fit_length = 300
+
+    plot = True
+
+    # Get list of Files    
+    file_names = get_files(cwd)
+            
+    # Get Diode Names
+    diode_names = get_diode_names(file_names)
+
+    # Turn .txt Files into Dataframes
+    IV, CV = get_iv_cv_dataframes(file_names, diode_names)
+
+    # Put 1/C^2 values into Dataframes
+    CV = get_capacitance_squared_values(CV, diode_names)
+
+    # Get Depletion Values
+    CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_fit_length)
+
+    print(diode_names)
+
+    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_0min']['Dep_V'] = 1000
+
+    # Get Current at Depletion Voltage
+    IV = get_current_at_depv(IV, CV, diode_names)
+
+    # Make CumulData.txt File
+    make_culum_data_txt(IV, CV, diode_names)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Is NaN Function
 def isNaN(num):
     return num != num
@@ -338,53 +390,6 @@ def make_culum_data_txt(IV, CV, diode_names):
 
 
 
-
-
-
-
-
-
-
-
-def main():	 
-    
-    # Current Working Directory
-    cwd = os.getcwd() 
-
-    # Left Fit Estimation
-    left_fit_bias = [20, 80] 
-    right_fit_length = 300
-
-    plot = True
-
-    # Get list of Files    
-    file_names = get_files(cwd)
-            
-    # Get Diode Names
-    diode_names = get_diode_names(file_names)
-
-    # Turn .txt Files into Dataframes
-    IV, CV = get_iv_cv_dataframes(file_names, diode_names)
-
-    # Put 1/C^2 values into Dataframes
-    CV = get_capacitance_squared_values(CV, diode_names)
-
-    # Get Depletion Values
-    CV = find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_fit_length)
-
-    print(diode_names)
-
-    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_0min']['Dep_V'] = 1000
-    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_10min']['Dep_V'] = 1000
-    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_20min']['Dep_V'] = 1000
-    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_30min']['Dep_V'] = 1000
-    # CV['N4789_21_UR_DIODE_GR_Irradiated_60C_40min']['Dep_V'] = 1000
-
-    # Get Current at Depletion Voltage
-    IV = get_current_at_depv(IV, CV, diode_names)
-
-    # Make CumulData.txt File
-    make_culum_data_txt(IV, CV, diode_names)
 
 if __name__ == '__main__':
  	main()
