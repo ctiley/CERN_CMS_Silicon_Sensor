@@ -14,8 +14,8 @@ def main():
     cwd = os.getcwd() 
 
     # Left Fit Estimation
-    left_fit_bias = [20, 80] 
-    right_fit_length = 300
+    left_fit_bias = [280, 420] 
+    right_fit_length = 350
 
     plot = True
 
@@ -224,7 +224,7 @@ def get_capacitance_squared_values(CV, diode_names):
 # This Function Produces 1/C^2 Values
 def find_depletion_voltage(CV, diode_names, left_fit_bias, plot, right_distance):
     
-    extra_left_fit = 200
+    extra_left_fit = 250
     
     for i in range(0, len(diode_names)):
 
